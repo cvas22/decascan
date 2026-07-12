@@ -1,0 +1,249 @@
+"""Rule tests, driven off the fixture servers in tests/fixtures/."""
+
+from __future__ import annotations
+
+from pathlib import Path
+
+import pytest
+
+from mcpaudit.core.config import ScanConfig
+from mcpaudit.core.findings import Severity
+from mcpaudit.core.scanner import scan
+
+FIXTURES = Path(__file__).parent / "fixtures"
+
+
+@pytest.fixture(scope="module")
+def vulnerable_python():
+    return scan(FIXTURES / "vulnerable_python")
+
+
+@pytest.fixture(scope="module")
+def vulnerable_ts():
+    return scan(FIXTURES / "vulnerable_ts")
+
+
+@pytest.fixture(scope="module")
+def lowlevel():
+    return scan(FIXTURES / "lowlevel_python")
+
+
+@pytest.fixture(scope="module")
+def clean():
+    return scan(FIXTURES / "clean_python")
+
+
+def rule_ids(result) -> set[str]:
+    return {f.rule_id for f in result.findings}
+
+
+def findings_for(result, rule_id: str) -> list:
+    return [f for f in result.findings if f.rule_id == rule_id]
+
+
+# --- MCP01: secrets -----------------------------------------------------------------------
+
+
+def test_finds_hardcoded_anthropic_key(vulnerable_python):
+    hits = findings_for(vulnerable_python, "MCP01-001")
+    assert any(f.severity == Severity.CRITICAL and f.file_path == "server.py" for f in hits)
+
+
+def test_hardcoded_key_is_redacted_in_output(vulnerable_python):
+    for finding in findings_for(vulnerable_python, "MCP01-001"):
+        assert "sk-ant-api03-Vq7hK2mZ" not in (finding.snippet or "")
+        assert "*" in (finding.snippet or "")
+
+
+def test_finds_github_token_in_typescript(vulnerable_ts):
+    hits = findings_for(vulnerable_ts, "MCP01-001")
+    assert any("GitHub token" in f.title for f in hits)
+
+
+def test_flags_credential_accepted_as_tool_parameter(vulnerable_python):
+    hits = findings_for(vulnerable_python, "MCP01-002")
+    assert any(f.metadata.get("tool") == "sync_remote" for f in hits)
+
+
+# --- MCP02: scope creep -------------------------------------------------------------------
+
+
+def test_flags_exec_beyond_declared_read_scope(vulnerable_python):
+    hits = findings_for(vulnerable_python, "MCP02-001")
+    capabilities = {f.metadata.get("capability") for f in hits}
+    assert "exec" in capabilities  # subprocess.run, declared scope is read:files only
+    assert "fs:write" in capabilities  # Path.write_text
+    assert "net" in capabilities  # httpx.get
+
+
+def test_exec_scope_violation_is_critical(vulnerable_python):
+    exec_hits = [
+        f for f in findings_for(vulnerable_python, "MCP02-001")
+        if f.metadata.get("capability") == "exec"
+    ]
+    assert exec_hits and all(f.severity == Severity.CRITICAL for f in exec_hits)
+
+
+def test_granted_capability_is_not_flagged(vulnerable_python):
+    """read_file uses Path.read_text and read:files IS declared — no MCP02 finding for it."""
+    read_hits = [
+        f for f in findings_for(vulnerable_python, "MCP02-001")
+        if f.metadata.get("capability") == "fs:read"
+    ]
+    assert read_hits == []
+
+
+# --- MCP03: tool poisoning ----------------------------------------------------------------
+
+
+def test_flags_unconstrained_command_reaching_shell(vulnerable_python):
+    hits = findings_for(vulnerable_python, "MCP03-001")
+    assert any(f.metadata.get("tool") == "run_command" for f in hits)
+    assert all(f.severity == Severity.CRITICAL for f in hits)
+
+
+def test_flags_unconstrained_command_in_typescript(vulnerable_ts):
+    hits = findings_for(vulnerable_ts, "MCP03-001")
+    assert any(f.metadata.get("tool") == "run_build" for f in hits)
+
+
+def test_flags_open_input_schema(vulnerable_python):
+    hits = findings_for(vulnerable_python, "MCP03-002")
+    assert any(f.metadata.get("tool") == "search_files" for f in hits)
+
+
+def test_manifest_findings_point_at_the_tool_not_line_one(vulnerable_python):
+    """A finding whose location is always `manifest:1` is a finding nobody can act on."""
+    hits = [f for f in findings_for(vulnerable_python, "MCP03-002") if f.file_path == ".mcp.json"]
+    assert hits and all(f.line > 1 for f in hits)
+    assert any("search_files" in (f.snippet or "") for f in hits)
+
+
+def test_flags_risky_param_without_a_sink_at_medium(vulnerable_python):
+    hits = findings_for(vulnerable_python, "MCP03-003")
+    tools = {f.metadata.get("tool") for f in hits}
+    assert "read_file" in tools  # path: str, no exec sink -> medium, not critical
+    assert "run_command" not in tools  # already reported by MCP03-001, not duplicated
+
+
+def test_flags_tool_with_no_schema(vulnerable_ts):
+    hits = findings_for(vulnerable_ts, "MCP03-004")
+    assert any(f.metadata.get("tool") == "list_branches" for f in hits)
+
+
+# --- The low-level SDK + pydantic shape the official servers use ---------------------------
+
+
+def test_reads_a_pydantic_input_schema(lowlevel):
+    """`inputSchema=Grep.model_json_schema()` must resolve to the Grep model's fields.
+
+    The official MCP servers all declare tools this way. A scanner that can't follow it reports a
+    clean bill of health on the exact servers people copy from.
+    """
+    from mcpaudit.core.config import ScanConfig
+    from mcpaudit.core.context import build_context
+
+    ctx = build_context(FIXTURES / "lowlevel_python", ScanConfig())
+    tools = {t.name: t for t in ctx.code_tools}
+    assert "grep_logs" in tools
+
+    grep = tools["grep_logs"]
+    assert grep.has_schema
+    assert {p.name for p in grep.params} == {"pattern", "logfile"}
+    assert grep.params[0].required  # Field(...) means required
+    assert not grep.params[1].required  # has a default
+    assert not grep.additional_properties_open  # pydantic drops extras unless extra="allow"
+
+
+def test_flags_sink_inside_a_call_tool_dispatcher(lowlevel):
+    hits = findings_for(lowlevel, "MCP03-001")
+    assert any(f.metadata.get("tool") == "grep_logs" for f in hits)
+    assert all(f.severity == Severity.CRITICAL for f in hits)  # shell=True
+
+
+# --- MCP07: auth --------------------------------------------------------------------------
+
+
+def test_flags_network_server_without_auth(vulnerable_python):
+    hits = findings_for(vulnerable_python, "MCP07-001")
+    assert len(hits) == 1
+    assert hits[0].severity == Severity.CRITICAL
+
+
+def test_flags_wildcard_cors(vulnerable_python, vulnerable_ts):
+    assert findings_for(vulnerable_python, "MCP07-002")  # manifest: cors.allowOrigin = "*"
+    assert findings_for(vulnerable_ts, "MCP07-002")  # code: Access-Control-Allow-Origin: *
+
+
+def test_stdio_server_is_not_flagged_for_missing_auth(clean):
+    assert findings_for(clean, "MCP07-001") == []
+
+
+# --- MCP09: shadow servers ----------------------------------------------------------------
+
+
+def test_flags_second_server_instantiation(vulnerable_python):
+    hits = findings_for(vulnerable_python, "MCP09-001")
+    assert len(hits) == 1
+    assert hits[0].file_path == "debug_server.py"
+
+
+def test_flags_undeclared_port(vulnerable_python):
+    ports = {f.metadata.get("port") for f in findings_for(vulnerable_python, "MCP09-002")}
+    assert "8081" in ports  # bound in debug_server.py, absent from .mcp.json
+    assert "8080" not in ports  # declared, so not a shadow listener
+
+
+def test_flags_undeclared_port_in_typescript(vulnerable_ts):
+    ports = {f.metadata.get("port") for f in findings_for(vulnerable_ts, "MCP09-002")}
+    assert "9090" in ports
+
+
+# --- False positives ----------------------------------------------------------------------
+
+
+def test_clean_server_produces_no_actionable_findings(clean):
+    actionable = [f for f in clean.findings if f.severity.rank >= Severity.MEDIUM.rank]
+    assert actionable == [], [f"{f.rule_id} {f.file_path}:{f.line} {f.title}" for f in actionable]
+
+
+def test_scan_reports_no_internal_errors(vulnerable_python, vulnerable_ts, clean):
+    for result in (vulnerable_python, vulnerable_ts, clean):
+        assert result.errors == []
+
+
+# --- Scanner plumbing ---------------------------------------------------------------------
+
+
+def test_inline_suppression_silences_a_finding(tmp_path):
+    (tmp_path / "server.py").write_text(
+        'KEY = "sk-ant-api03-Vq7hK2mZ8xR4tN6wY1bC3dF5gH9jL0pQ2sT4uV6wX8yZ0aB2cD4eF6"\n'
+    )
+    assert findings_for(scan(tmp_path), "MCP01-001")
+
+    (tmp_path / "server.py").write_text(
+        'KEY = "sk-ant-api03-Vq7hK2mZ8xR4tN6wY1bC3dF5gH9jL0pQ2sT4uV6wX8yZ0aB2cD4eF6"'
+        "  # mcpaudit:ignore\n"
+    )
+    assert findings_for(scan(tmp_path), "MCP01-001") == []
+
+
+def test_fail_on_threshold(vulnerable_python, clean):
+    assert vulnerable_python.should_fail(Severity.CRITICAL)
+    assert not clean.should_fail(Severity.MEDIUM)
+
+
+def test_rule_selection(vulnerable_python):
+    only_mcp01 = scan(
+        FIXTURES / "vulnerable_python",
+        ScanConfig(enabled_rules=frozenset({"MCP01-001"})),
+    )
+    assert rule_ids(only_mcp01) == {"MCP01-001"}
+    assert only_mcp01.rules_run == 1
+
+
+def test_placeholders_are_not_reported(tmp_path):
+    (tmp_path / ".env.example").write_text(
+        'API_KEY="${YOUR_API_KEY_HERE}"\nPASSWORD="changeme"\nTOKEN="xxxxxxxxxxxxxxxx"\n'
+    )
+    assert scan(tmp_path).findings == []

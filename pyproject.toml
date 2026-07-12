@@ -1,0 +1,57 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "mcpaudit"
+version = "0.1.0"
+description = "OWASP MCP Top 10 security scanner for Model Context Protocol servers"
+readme = "README.md"
+license = { text = "Apache-2.0" }
+requires-python = ">=3.10"
+authors = [{ name = "Srinivas Chippagiri" }]
+keywords = ["mcp", "security", "owasp", "sast", "model-context-protocol"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: Apache Software License",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Security",
+]
+dependencies = [
+  "click>=8.1",
+  "rich>=13.0",
+  "PyYAML>=6.0",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.0",
+  "pytest-cov>=5.0",
+  "ruff>=0.6",
+]
+
+[project.scripts]
+mcpaudit = "mcpaudit.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/schippagiri/mcpaudit"
+Issues = "https://github.com/schippagiri/mcpaudit/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/mcpaudit"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+# Findings carry their remediation as prose. 110 keeps that text readable in-source instead of
+# shredding every sentence across four continuation strings.
+line-length = 110
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]

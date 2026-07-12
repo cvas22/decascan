@@ -1,0 +1,25 @@
+{
+  "name": "notes",
+  "version": "0.1.0",
+  "transport": "stdio",
+  "command": "python",
+  "args": ["server.py"],
+  "scopes": ["read:files", "read:env"],
+  "tools": [
+    {
+      "name": "read_note",
+      "description": "Read one of the team's notes.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string",
+            "enum": ["standup", "roadmap", "retro"]
+          }
+        },
+        "required": ["name"],
+        "additionalProperties": false
+      }
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "name": "repo-tools",
+  "version": "0.1.0",
+  "transport": "http",
+  "port": 8080,
+  "scopes": ["read:files"],
+  "tools": [
+    {
+      "name": "list_branches",
+      "description": "List git branches."
+    }
+  ]
+}

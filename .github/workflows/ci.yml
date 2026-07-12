@@ -1,0 +1,39 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        python-version: ["3.10", "3.12"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - run: pip install -e ".[dev]"
+
+      - run: ruff check src tests
+
+      - run: pytest -q
+
+      # The scanner must find the vulnerabilities in its own vulnerable fixture, and none in the
+      # clean one. If either flips, the tool is broken in the way that matters.
+      - name: scan the vulnerable fixture (expect findings)
+        shell: bash
+        run: |
+          mcpaudit scan tests/fixtures/vulnerable_python && exit 1
+          echo "exited non-zero as expected"
+
+      - name: scan the clean fixture (expect none)
+        run: mcpaudit scan tests/fixtures/clean_python

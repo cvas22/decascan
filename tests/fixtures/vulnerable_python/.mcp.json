@@ -1,0 +1,23 @@
+{
+  "name": "demo-file-server",
+  "version": "0.1.0",
+  "transport": "sse",
+  "port": 8080,
+  "scopes": ["read:files"],
+  "cors": {
+    "allowOrigin": "*"
+  },
+  "tools": [
+    {
+      "name": "search_files",
+      "description": "Search the workspace for files matching a query.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": { "type": "string" }
+        },
+        "required": ["query"]
+      }
+    }
+  ]
+}
