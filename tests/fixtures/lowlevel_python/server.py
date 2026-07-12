@@ -1,6 +1,6 @@
 """Intentionally vulnerable MCP server in the low-level SDK + pydantic style used by the official
 servers: schemas come from `Model.model_json_schema()` and every tool is implemented inside one
-`@server.call_tool()` dispatcher. Fixture for mcpaudit tests — do not deploy.
+`@server.call_tool()` dispatcher. Fixture for mcpcheck tests — do not deploy.
 """
 
 import subprocess

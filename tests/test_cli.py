@@ -8,9 +8,9 @@ from pathlib import Path
 from click.testing import CliRunner
 from rich.console import Console
 
-from mcpaudit.cli import main
-from mcpaudit.core.scanner import scan
-from mcpaudit.outputs import pretty
+from mcpcheck.cli import main
+from mcpcheck.core.scanner import scan
+from mcpcheck.outputs import pretty
 
 FIXTURES = Path(__file__).parent / "fixtures"
 VULNERABLE = str(FIXTURES / "vulnerable_python")
@@ -56,7 +56,7 @@ def test_output_file_is_written(tmp_path):
         main, ["scan", VULNERABLE, "-o", "sarif", "-f", str(target), "--no-fail"]
     )
     assert result.exit_code == 0
-    assert json.loads(target.read_text())["runs"][0]["tool"]["driver"]["name"] == "mcpaudit"
+    assert json.loads(target.read_text())["runs"][0]["tool"]["driver"]["name"] == "mcpcheck"
 
 
 def test_unknown_rule_id_is_rejected():

@@ -32,8 +32,8 @@ jobs:
       - name: scan the vulnerable fixture (expect findings)
         shell: bash
         run: |
-          mcpaudit scan tests/fixtures/vulnerable_python && exit 1
+          mcpcheck scan tests/fixtures/vulnerable_python && exit 1
           echo "exited non-zero as expected"
 
       - name: scan the clean fixture (expect none)
-        run: mcpaudit scan tests/fixtures/clean_python
+        run: mcpcheck scan tests/fixtures/clean_python

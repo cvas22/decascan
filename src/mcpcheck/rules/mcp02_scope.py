@@ -127,7 +127,7 @@ def no_scopes_declared(ctx: ScanContext) -> Iterable[Finding]:
             title=f"`{manifest.path}` declares tools but no scopes",
             description=(
                 f"The server's code can {listed}, but the manifest declares no scopes, so a client "
-                "has no way to reason about what it is granting — and mcpaudit has nothing to diff "
+                "has no way to reason about what it is granting — and mcpcheck has nothing to diff "
                 "the implementation against."
             ),
             file_path=manifest.path,

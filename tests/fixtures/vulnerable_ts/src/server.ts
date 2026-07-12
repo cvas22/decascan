@@ -1,5 +1,5 @@
 /**
- * Intentionally vulnerable MCP server. Fixture for mcpaudit tests — do not deploy.
+ * Intentionally vulnerable MCP server. Fixture for mcpcheck tests — do not deploy.
  */
 import { exec } from "node:child_process";
 import fs from "node:fs";

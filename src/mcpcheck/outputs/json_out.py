@@ -10,7 +10,7 @@ from ..core.scanner import ScanResult
 
 def to_dict(result: ScanResult, version: str = "0.1.0") -> dict:
     return {
-        "tool": "mcpaudit",
+        "tool": "mcpcheck",
         "version": version,
         "owasp_mcp_top10_version": OWASP_MCP_TOP10_VERSION,
         "summary": {

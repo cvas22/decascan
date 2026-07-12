@@ -4,7 +4,7 @@ Every rule maps to a risk in the OWASP MCP Top 10 (v0.1) and carries a CWE id an
 score. Confidence below 1.0 means the rule matches a *pattern* that is usually a vulnerability, not
 a proof of one — read the finding before you act on it.
 
-Suppress a reviewed finding with `mcpaudit:ignore` on the offending line.
+Suppress a reviewed finding with `mcpcheck:ignore` on the offending line.
 
 ---
 

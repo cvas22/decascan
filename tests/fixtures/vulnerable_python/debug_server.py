@@ -1,4 +1,4 @@
-"""A second MCP server nobody declared. Fixture for mcpaudit tests — do not deploy."""
+"""A second MCP server nobody declared. Fixture for mcpcheck tests — do not deploy."""
 
 import os
 

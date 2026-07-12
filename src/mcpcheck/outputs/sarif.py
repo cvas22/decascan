@@ -10,7 +10,7 @@ from ..core.scanner import ScanResult
 from ..rules import all_rules
 
 SCHEMA = "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json"
-TOOL_URI = "https://github.com/schippagiri/mcpaudit"
+TOOL_URI = "https://github.com/cvas22/mcpcheck"
 
 # SARIF only has error/warning/note; GitHub renders severity from `security-severity` (a CVSS-ish
 # number), so we emit both.
@@ -84,7 +84,7 @@ def to_sarif(result: ScanResult, version: str = "0.1.0") -> dict:
                     "text": f"{finding.title}. {finding.description} Remediation: {finding.remediation}"
                 },
                 "locations": [location],
-                "partialFingerprints": {"mcpauditFingerprint/v1": _fingerprint(finding)},
+                "partialFingerprints": {"mcpcheckFingerprint/v1": _fingerprint(finding)},
                 "properties": {
                     "security-severity": _SECURITY_SEVERITY[finding.severity],
                     "mcpId": finding.mcp_id,
@@ -102,7 +102,7 @@ def to_sarif(result: ScanResult, version: str = "0.1.0") -> dict:
             {
                 "tool": {
                     "driver": {
-                        "name": "mcpaudit",
+                        "name": "mcpcheck",
                         "version": version,
                         "informationUri": TOOL_URI,
                         "semanticVersion": version,

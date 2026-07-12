@@ -1,13 +1,13 @@
-# mcpaudit
+# mcpcheck
 
 **A security scanner for Model Context Protocol servers, mapped to the OWASP MCP Top 10.**
 
 MCP servers run with the privileges of the developer who installed them: they read files, call
 internal APIs, and execute commands on behalf of an LLM that anything in its context window can
-influence. `mcpaudit` reads a server's manifest, config, and source and tells you where that trust
+influence. `mcpcheck` reads a server's manifest, config, and source and tells you where that trust
 is misplaced — before you ship it.
 
-No API key. No network calls. No account. `mcpaudit scan .` and you have your answer.
+No API key. No network calls. No account. `mcpcheck scan .` and you have your answer.
 
 ## Example run
 
@@ -15,7 +15,7 @@ A real scan of `tests/fixtures/vulnerable_ts` — a 30-line TypeScript MCP serve
 under 10 ms. Reproduce it yourself with the command below; nothing here is mocked up.
 
 ```console
-$ mcpaudit scan tests/fixtures/vulnerable_ts
+$ mcpcheck scan tests/fixtures/vulnerable_ts
 
  CRITICAL  MCP01 Token Mismanagement & Secret Exposure  [MCP01-001]
   GitHub token committed to source
@@ -100,36 +100,36 @@ Four things that run demonstrates, in order of how much they matter:
 - **Confidence is reported honestly** — 90% on the co-location check, 65% on the `path` heuristic —
   because one is near-certain and the other is a pattern that is only *usually* a problem.
 
-By contrast, `mcpaudit scan tests/fixtures/clean_python` prints a green "No findings" and exits `0`,
+By contrast, `mcpcheck scan tests/fixtures/clean_python` prints a green "No findings" and exits `0`,
 and so do the real `mcp-server-fetch` and `mcp-server-time`.
 
 ## Install
 
 ```bash
-pip install mcpaudit
+pip install mcpcheck
 ```
 
 ## Use
 
 ```bash
-mcpaudit scan ./server              # human-readable
-mcpaudit scan ./server -o json      # for pipelines
-mcpaudit scan ./server -o sarif -f results.sarif   # for GitHub Code Scanning
-mcpaudit rules                      # what it checks and why
+mcpcheck scan ./server              # human-readable
+mcpcheck scan ./server -o json      # for pipelines
+mcpcheck scan ./server -o sarif -f results.sarif   # for GitHub Code Scanning
+mcpcheck rules                      # what it checks and why
 ```
 
-`mcpaudit scan` exits `1` when it finds something at or above `--fail-on` (default: `high`), so it
+`mcpcheck scan` exits `1` when it finds something at or above `--fail-on` (default: `high`), so it
 drops into CI unchanged:
 
 ```yaml
-- run: pip install mcpaudit
-- run: mcpaudit scan . --output sarif --output-file mcpaudit.sarif --no-fail
+- run: pip install mcpcheck
+- run: mcpcheck scan . --output sarif --output-file mcpcheck.sarif --no-fail
 - uses: github/codeql-action/upload-sarif@v3
   with:
-    sarif_file: mcpaudit.sarif
+    sarif_file: mcpcheck.sarif
 ```
 
-Suppress a finding you've reviewed by putting `mcpaudit:ignore` on the line.
+Suppress a finding you've reviewed by putting `mcpcheck:ignore` on the line.
 
 ## What v0.1 checks
 
@@ -165,7 +165,7 @@ handler span contains them, falling back to the `@server.call_tool()` dispatcher
 servers that implement every tool in one function.
 
 **TypeScript/JavaScript is parsed lexically, not with a real AST.** v0.1 deliberately avoids a
-Node/`tsc` dependency so that `pip install mcpaudit` is the entire install story. The parser is
+Node/`tsc` dependency so that `pip install mcpcheck` is the entire install story. The parser is
 brace-aware — it pulls complete zod and JSON Schema literals out of source, and it understands both
 the high-level `server.tool(name, schema, handler)` shape and the low-level
 `setRequestHandler(CallToolRequestSchema, …)` dispatcher. **It will miss aliased imports and
@@ -206,7 +206,7 @@ uv pip install -e ".[dev]"
 pytest
 ```
 
-Rules live in `src/mcpaudit/rules/`, one module per OWASP risk. A rule is a function from a
+Rules live in `src/mcpcheck/rules/`, one module per OWASP risk. A rule is a function from a
 `ScanContext` to `Finding`s, registered with a decorator — see `rules/base.py`. Parsers normalize
 every language into the shared vocabulary in `parsers/common.py`, so rules never care whether a
 server is Python or TypeScript.

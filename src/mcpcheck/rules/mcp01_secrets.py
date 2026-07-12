@@ -153,7 +153,7 @@ def hardcoded_credentials(ctx: ScanContext) -> Iterable[Finding]:
                     snippet=_redacted_line(line, value),
                     remediation=(
                         "Move the value to an environment variable or secret manager and reference "
-                        "it at runtime. If this is test data, rename it or add `mcpaudit:ignore` to "
+                        "it at runtime. If this is test data, rename it or add `mcpcheck:ignore` to "
                         "the line."
                     ),
                     cwe_id="CWE-798",

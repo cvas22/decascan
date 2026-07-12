@@ -105,7 +105,7 @@ def render(result: ScanResult, console: Console | None = None, show_info: bool =
                     ),
                     style="green",
                 ),
-                title="mcpaudit",
+                title="mcpcheck",
                 border_style="green",
             )
         )

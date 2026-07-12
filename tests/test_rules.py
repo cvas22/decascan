@@ -6,9 +6,9 @@ from pathlib import Path
 
 import pytest
 
-from mcpaudit.core.config import ScanConfig
-from mcpaudit.core.findings import Severity
-from mcpaudit.core.scanner import scan
+from mcpcheck.core.config import ScanConfig
+from mcpcheck.core.findings import Severity
+from mcpcheck.core.scanner import scan
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -140,8 +140,8 @@ def test_reads_a_pydantic_input_schema(lowlevel):
     The official MCP servers all declare tools this way. A scanner that can't follow it reports a
     clean bill of health on the exact servers people copy from.
     """
-    from mcpaudit.core.config import ScanConfig
-    from mcpaudit.core.context import build_context
+    from mcpcheck.core.config import ScanConfig
+    from mcpcheck.core.context import build_context
 
     ctx = build_context(FIXTURES / "lowlevel_python", ScanConfig())
     tools = {t.name: t for t in ctx.code_tools}
@@ -223,7 +223,7 @@ def test_inline_suppression_silences_a_finding(tmp_path):
 
     (tmp_path / "server.py").write_text(
         'KEY = "sk-ant-api03-Vq7hK2mZ8xR4tN6wY1bC3dF5gH9jL0pQ2sT4uV6wX8yZ0aB2cD4eF6"'
-        "  # mcpaudit:ignore\n"
+        "  # mcpcheck:ignore\n"
     )
     assert findings_for(scan(tmp_path), "MCP01-001") == []
 
