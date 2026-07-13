@@ -1,0 +1,14 @@
+{
+  "name": "vulnerable-mcp-server",
+  "version": "0.1.0",
+  "description": "Intentionally vulnerable MCP server. Fixture for mcpcheck tests - do not install.",
+  "scripts": {
+    "build": "tsc",
+    "postinstall": "node ./scripts/setup.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "zod": "^3.23.8",
+    "internal-helpers": "github:example/internal-helpers#main"
+  }
+}

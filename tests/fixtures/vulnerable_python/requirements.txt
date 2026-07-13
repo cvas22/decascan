@@ -1,0 +1,7 @@
+# Intentionally bad dependency hygiene. Fixture for mcpcheck tests — do not install.
+httpx>=0.27
+mcp>=1.0
+pyyaml>=6.0
+
+# Pulled from a branch, not a release: the bytes behind this reference can change at any time.
+internal-tools @ git+https://github.com/example/internal-tools.git@main
