@@ -33,6 +33,11 @@ def clean():
     return scan(FIXTURES / "clean_python")
 
 
+@pytest.fixture(scope="module")
+def poisoned():
+    return scan(FIXTURES / "poisoned_python")
+
+
 def rule_ids(result) -> set[str]:
     return {f.rule_id for f in result.findings}
 
@@ -159,6 +164,192 @@ def test_flags_sink_inside_a_call_tool_dispatcher(lowlevel):
     hits = findings_for(lowlevel, "MCP03-001")
     assert any(f.metadata.get("tool") == "grep_logs" for f in hits)
     assert all(f.severity == Severity.CRITICAL for f in hits)  # shell=True
+
+
+# --- MCP04: supply chain ------------------------------------------------------------------
+
+
+def test_flags_git_dependency(vulnerable_python):
+    hits = findings_for(vulnerable_python, "MCP04-001")
+    assert any(f.metadata.get("dependency") == "internal-tools" for f in hits)
+    assert all(f.metadata.get("source") == "vcs" for f in hits)
+
+
+def test_flags_floating_deps_without_lockfile(vulnerable_python):
+    hits = findings_for(vulnerable_python, "MCP04-002")
+    assert hits  # httpx>=0.27, mcp>=1.0, ... and no lockfile committed
+
+
+def test_flags_npm_install_hook(vulnerable_ts):
+    hits = findings_for(vulnerable_ts, "MCP04-003")
+    assert any(f.metadata.get("hook") == "postinstall" for f in hits)
+
+
+def test_pinned_registry_dep_is_not_flagged(tmp_path):
+    (tmp_path / "requirements.txt").write_text("httpx==0.27.2\nrich==13.7.1\n")
+    (tmp_path / "server.py").write_text(
+        "from mcp.server.fastmcp import FastMCP\nmcp = FastMCP('x')\n"
+    )
+    result = scan(tmp_path)
+    assert findings_for(result, "MCP04-001") == []
+    assert findings_for(result, "MCP04-002") == []
+
+
+def test_lockfile_silences_floating_dependency_finding(tmp_path):
+    (tmp_path / "requirements.txt").write_text("httpx>=0.27\n")
+    (tmp_path / "requirements.lock").write_text("httpx==0.27.2\n")
+    (tmp_path / "server.py").write_text(
+        "from mcp.server.fastmcp import FastMCP\nmcp = FastMCP('x')\n"
+    )
+    assert findings_for(scan(tmp_path), "MCP04-002") == []
+
+
+def test_classifiers_are_not_read_as_dependencies(tmp_path):
+    """A pyproject array that isn't a dependency list must not become findings."""
+    (tmp_path / "pyproject.toml").write_text(
+        "[project]\n"
+        'name = "x"\n'
+        'classifiers = ["Topic :: Security", "License :: OSI Approved :: MIT License"]\n'
+        'keywords = ["mcp", "security"]\n'
+        'dependencies = ["httpx==0.27.2"]\n'
+    )
+    deps_findings = [
+        f for f in scan(tmp_path).findings if f.mcp_id == "MCP04"
+    ]
+    assert deps_findings == []  # httpx is pinned; classifiers/keywords are not dependencies
+
+
+# --- MCP05: command injection (taint-proven) ----------------------------------------------
+
+
+def test_taint_proves_input_reaches_shell(vulnerable_python):
+    hits = findings_for(vulnerable_python, "MCP05-001")
+    assert any(f.metadata.get("param") == "command" for f in hits)
+    assert all(f.severity == Severity.CRITICAL for f in hits)
+    assert all(f.metadata.get("proven") == "true" for f in hits)  # real AST, not co-location
+
+
+def test_taint_proves_input_reaches_path(vulnerable_python):
+    hits = findings_for(vulnerable_python, "MCP05-003")
+    params = {f.metadata.get("param") for f in hits}
+    assert "path" in params
+
+
+def test_write_content_is_not_reported_as_a_path(vulnerable_python):
+    """`Path(path).write_text(body)` — `body` is content, not a path, and must not be an MCP05."""
+    hits = findings_for(vulnerable_python, "MCP05-003")
+    assert all(f.metadata.get("param") != "body" for f in hits)
+
+
+def test_eval_of_tool_input_is_flagged(poisoned):
+    hits = findings_for(poisoned, "MCP05-002")
+    assert any(f.metadata.get("param") == "expr" for f in hits)
+
+
+def test_enum_constrained_input_is_not_a_taint_finding(clean):
+    """The clean fixture interpolates a Literal-constrained value into a path. Not injectable."""
+    assert findings_for(clean, "MCP05-003") == []
+
+
+def test_ts_taint_is_reported_but_less_confident(vulnerable_ts):
+    """TS has no AST here, so the flow is a name match: reported, at lower confidence, marked so."""
+    hits = findings_for(vulnerable_ts, "MCP05-001")
+    assert hits
+    assert all(f.metadata.get("proven") == "false" for f in hits)
+    assert all(f.confidence < 0.8 for f in hits)
+
+
+def test_argv_argument_is_not_command_injection(tmp_path):
+    (tmp_path / "server.py").write_text(
+        "import subprocess\n"
+        "from mcp.server.fastmcp import FastMCP\n"
+        "mcp = FastMCP('x')\n"
+        "@mcp.tool()\n"
+        "def build(target: str) -> str:\n"
+        "    return subprocess.run(['make', target]).stdout\n"
+    )
+    # `target` is an argument to a fixed program, not the program — no shell, no injection.
+    assert findings_for(scan(tmp_path), "MCP05-001") == []
+
+
+def test_shlex_quote_sanitizes_the_flow(tmp_path):
+    (tmp_path / "server.py").write_text(
+        "import subprocess, shlex\n"
+        "from mcp.server.fastmcp import FastMCP\n"
+        "mcp = FastMCP('x')\n"
+        "@mcp.tool()\n"
+        "def echo(name: str) -> str:\n"
+        "    safe = shlex.quote(name)\n"
+        "    return subprocess.run(f'echo {safe}', shell=True).stdout\n"
+    )
+    assert findings_for(scan(tmp_path), "MCP05-001") == []
+
+
+# --- MCP06: prompt injection --------------------------------------------------------------
+
+
+def test_flags_instruction_in_tool_description(poisoned):
+    hits = findings_for(poisoned, "MCP06-001")
+    tools = {f.metadata.get("tool") for f in hits}
+    assert "read_docs" in tools  # <IMPORTANT> block steering the model
+    assert "summarize" in tools  # "ignore all previous instructions"
+
+
+def test_flags_hidden_characters_in_description(poisoned):
+    hits = findings_for(poisoned, "MCP06-002")
+    assert any(f.metadata.get("tool") == "summarize" for f in hits)
+
+
+def test_honest_description_is_not_flagged(clean):
+    assert findings_for(clean, "MCP06-001") == []
+    assert findings_for(clean, "MCP06-002") == []
+
+
+def test_flags_remote_content_returned_to_model(vulnerable_python):
+    hits = findings_for(vulnerable_python, "MCP06-003")
+    assert any(f.metadata.get("tool") == "sync_remote" for f in hits)
+
+
+# --- MCP08: audit -------------------------------------------------------------------------
+
+
+def test_flags_missing_audit_trail(vulnerable_python):
+    hits = findings_for(vulnerable_python, "MCP08-001")
+    assert len(hits) == 1  # server shells out, logs nothing
+
+
+def test_flags_swallowed_exception(poisoned):
+    hits = findings_for(poisoned, "MCP08-002")
+    assert any("OSError" in (f.metadata.get("exception") or "") for f in hits)
+
+
+def test_audit_rule_does_not_fire_on_a_non_server(tmp_path):
+    """A plain library that writes files is not a server with a missing audit trail."""
+    (tmp_path / "util.py").write_text(
+        "from pathlib import Path\n"
+        "def save(p, b):\n"
+        "    Path(p).write_text(b)\n"
+    )
+    assert findings_for(scan(tmp_path), "MCP08-001") == []
+
+
+# --- MCP10: over-sharing ------------------------------------------------------------------
+
+
+def test_flags_environment_returned_to_model(vulnerable_python):
+    hits = findings_for(vulnerable_python, "MCP10-001")
+    assert any(f.metadata.get("tool") == "dump_env" for f in hits)
+
+
+def test_flags_credential_path_access(poisoned):
+    hits = findings_for(poisoned, "MCP10-002")
+    markers = {f.metadata.get("marker") for f in hits}
+    assert markers & {".ssh", "id_rsa"}  # ~/.ssh/id_rsa read by load_identity
+
+
+def test_flags_broad_filesystem_root(poisoned):
+    hits = findings_for(poisoned, "MCP10-003")
+    assert any(f.metadata.get("root") == "/" for f in hits)
 
 
 # --- MCP07: auth --------------------------------------------------------------------------

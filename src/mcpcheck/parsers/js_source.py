@@ -22,8 +22,10 @@ from .common import (
     FS_WRITE,
     NET,
     Call,
+    ExternalReturn,
     ServerDef,
     SourceFacts,
+    TaintFlow,
     ToolDef,
     ToolParam,
 )
@@ -75,6 +77,22 @@ _ZOD_FIELD = re.compile(
     r"[\"'`]?(\w+)[\"'`]?\s*:\s*z\.(\w+)\s*\(([^)]*)\)((?:\s*\.\w+\s*\([^)]*\))*)"
 )
 _ZOD_CONSTRAINING = ("regex", "enum", "uuid", "email", "url", "max", "length", "literal", "ip")
+
+_DESCRIPTION = re.compile(r"\bdescription\s*:\s*([\"'`])((?:\\.|(?!\1).)*)\1", re.S)
+# `server.tool("name", "description", schema, handler)` — the SDK's positional-description form.
+_TOOL_REGISTER_DESC = re.compile(
+    r"\b(?:server|mcp|app)\.(?:tool|registerTool)\s*\(\s*[\"'`][^\"'`]+[\"'`]\s*,\s*"
+    r"([\"'`])((?:\\.|(?!\1).)*)\1"
+)
+_LOG_CALL = re.compile(
+    r"\b(?:console|logger|log|winston|pino|bunyan|audit)\s*\.\s*"
+    r"(?:log|info|warn|warning|error|debug|trace|fatal)\s*\("
+)
+_EMPTY_CATCH = re.compile(r"\bcatch\s*(?:\([^)]*\))?\s*\{\s*\}")
+_STRING_LITERAL = re.compile(r"[\"'`]([^\"'`]*)[\"'`]")
+_RETURN_STMT = re.compile(r"\breturn\b([^;\n]*)")
+# `${name}`, `" + name`, or the bare identifier — the three ways a value lands in a JS sink.
+_INTERPOLATION = "${%s}"
 
 
 def _line_of(text: str, index: int) -> int:
@@ -203,19 +221,33 @@ def parse_javascript(path: str, source: str) -> SourceFacts:
     def snippet(line: int) -> str:
         return lines[line - 1].strip() if 0 < line <= len(lines) else ""
 
+    # Sink -> the text of its arguments, so the taint pass below can ask what reaches it.
+    call_args: dict[int, str] = {}
+
     for pattern, capability, shell, dynamic in _SINKS:
         for match in pattern.finditer(text):
             line = _line_of(text, match.start())
-            facts.calls.append(
-                Call(
-                    name=match.group(0).rstrip("(").strip(),
-                    line=line,
-                    capability=capability,
-                    shell=shell,
-                    dynamic_eval=dynamic,
-                    raw=snippet(line),
-                )
+            args = _call_args(text, match.start())
+            call = Call(
+                name=match.group(0).rstrip("(").strip(),
+                line=line,
+                capability=capability,
+                shell=shell,
+                dynamic_eval=dynamic,
+                raw=snippet(line),
+                literal_args=_STRING_LITERAL.findall(args),
             )
+            facts.calls.append(call)
+            call_args[line] = args
+
+    for match in _LOG_CALL.finditer(text):
+        line = _line_of(text, match.start())
+        facts.log_calls.append(
+            Call(name=match.group(0).rstrip("(").strip(), line=line, raw=snippet(line))
+        )
+
+    for match in _EMPTY_CATCH.finditer(text):
+        facts.swallowed_excepts.append((_line_of(text, match.start()), "catch"))
 
     for match in _SERVER_CTOR.finditer(text):
         line = _line_of(text, match.start())
@@ -235,12 +267,117 @@ def parse_javascript(path: str, source: str) -> SourceFacts:
 
     facts.tools.extend(_tools_from_registrations(text, path))
     facts.tools.extend(_tools_from_object_literals(text, path, {t.name for t in facts.tools}))
+
+    _find_flows(facts, call_args)
+    _find_external_returns(text, facts)
     return facts
+
+
+def _call_args(text: str, start: int) -> str:
+    """The text between a call's parentheses. '' when they don't balance."""
+    end = _extract_call(text, start)
+    open_idx = text.find("(", start)
+    if end is None or open_idx == -1:
+        return ""
+    return text[open_idx + 1 : end - 1]
+
+
+def _find_flows(facts: SourceFacts, call_args: dict[int, str]) -> None:
+    """Heuristic taint: does a tool parameter's name appear in the arguments of a sink in its span?
+
+    This is a *name match*, not a proof of flow — there is no AST here to track assignments through.
+    Every flow it produces is marked `proven=False` so MCP05 reports it at lower confidence than the
+    Python equivalent. It catches the shape that actually appears in TS servers
+    (`exec(`git log ${branch}`)`) and misses anything laundered through a local variable.
+    """
+    for tool in facts.tools:
+        if tool.handler_start is None:
+            continue
+        for call in facts.calls_in_tool(tool):
+            if call.capability not in (EXEC, FS_READ, FS_WRITE):
+                continue
+            args = call_args.get(call.line, "")
+            if not args:
+                continue
+            for param in tool.params:
+                if not _mentions(args, param.name):
+                    continue
+                # An argv array (`execFile(cmd, [args])`) is not a shell; only a tainted program
+                # name is the injection, matching the Python analyzer's rule.
+                if call.capability == EXEC and not call.shell and not call.dynamic_eval:
+                    if not _mentions(args.split(",", 1)[0], param.name):
+                        continue
+                facts.taint_flows.append(
+                    TaintFlow(
+                        source=param.name,
+                        sink=call,
+                        tool=tool.name,
+                        steps=[tool.line, call.line],
+                        proven=False,
+                        sanitized=_is_quoted(args, param.name),
+                    )
+                )
+                break
+
+
+def _mentions(args: str, param: str) -> bool:
+    if _INTERPOLATION % param in args:
+        return True
+    return bool(re.search(rf"(?<![\w.$]){re.escape(param)}(?![\w$])", args))
+
+
+def _is_quoted(args: str, param: str) -> bool:
+    """`shell-quote`/`shescape` wrappers around the value neutralize the metacharacters."""
+    return bool(
+        re.search(rf"\b(?:quote|shellQuote|shescape|escapeShell)\s*\(\s*[^)]*\b{re.escape(param)}\b", args)
+    )
+
+
+def _find_external_returns(text: str, facts: SourceFacts) -> None:
+    """A network response handed straight back to the model is a prompt-injection delivery path."""
+    external = [c for c in facts.calls if c.capability in (NET, ENV)]
+    if not external:
+        return
+
+    for match in _RETURN_STMT.finditer(text):
+        line = _line_of(text, match.start())
+        body = match.group(1)
+        for call in external:
+            name = call.name.split(".")[0]
+            # Either the fetch is returned inline, or its awaited result is — both within a few
+            # lines of the call, which is as much flow as a lexical parser can honestly claim.
+            if name in body or (call.capability == ENV and "env" in body):
+                if 0 <= line - call.line <= 8:
+                    tool = next(
+                        (t.name for t in facts.tools if t.spans(line)),
+                        None,
+                    )
+                    facts.external_returns.append(
+                        ExternalReturn(origin=call, line=line, tool=tool)
+                    )
+                    break
 
 
 def _server_name(text: str, start: int) -> str | None:
     match = re.search(r"name\s*:\s*[\"'`]([^\"'`]+)[\"'`]", text[start : start + 200])
     return match.group(1) if match else None
+
+
+def _description_near(text: str, start: int, end: int | None) -> tuple[str | None, int | None]:
+    """The description a tool registration shows the model, in either SDK spelling.
+
+    `server.tool("name", "description", schema, handler)` puts it second; `registerTool("name",
+    { description, inputSchema }, handler)` puts it in the options object.
+    """
+    positional = _TOOL_REGISTER_DESC.match(text, start)
+    if positional:
+        return positional.group(2), _line_of(text, positional.start(2))
+
+    window = text[start : end if end else start + 400]
+    keyed = _DESCRIPTION.search(window)
+    if keyed:
+        return keyed.group(2), _line_of(text, start + keyed.start(2))
+    return None, None
 
 
 def _tools_from_registrations(text: str, path: str) -> list[ToolDef]:
@@ -256,6 +393,7 @@ def _tools_from_registrations(text: str, path: str) -> list[ToolDef]:
         call_end = _extract_call(text, match.start())
         tool.handler_start = line
         tool.handler_end = _line_of(text, call_end - 1) if call_end else line
+        tool.description, tool.description_line = _description_near(text, match.start(), call_end)
 
         if extracted:
             literal, _ = extracted
@@ -296,6 +434,7 @@ def _tools_from_object_literals(text: str, path: str, seen: set[str]) -> list[To
             continue
         line = _line_of(text, match.start())
         seen.add(name)
+        description = parsed.get("description")
         tools.append(
             ToolDef(
                 name=name,
@@ -306,6 +445,8 @@ def _tools_from_object_literals(text: str, path: str, seen: set[str]) -> list[To
                 has_schema=True,
                 params=params_from_json_schema(schema, line),
                 additional_properties_open=schema.get("additionalProperties", True) is not False,
+                description=description if isinstance(description, str) else None,
+                description_line=line,
             )
         )
     return tools

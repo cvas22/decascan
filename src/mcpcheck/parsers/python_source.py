@@ -16,8 +16,10 @@ from .common import (
     FS_WRITE,
     NET,
     Call,
+    ExternalReturn,
     ServerDef,
     SourceFacts,
+    TaintFlow,
     ToolDef,
     ToolParam,
 )
@@ -94,6 +96,15 @@ _NET_METHODS = {"urlopen", "create_connection"}
 _SERVER_CTORS = {"FastMCP", "Server", "MCPServer", "McpServer", "LowLevelServer"}
 _TOOL_DECORATORS = {"tool", "add_tool"}
 _DISPATCH_DECORATORS = {"call_tool", "list_tools"}
+
+# Logging frameworks. A server that shells out and calls none of these leaves no audit trail.
+_LOG_ROOTS = {"logging", "logger", "log", "structlog", "loguru", "_logger", "_log", "audit"}
+_LOG_METHODS = {"debug", "info", "warning", "warn", "error", "exception", "critical", "log"}
+
+# Calls that genuinely neutralize a tainted value. Only shell quoting qualifies: `os.path.realpath`
+# and friends normalize a path but do not confine it, so `../../etc/shadow` survives them intact —
+# treating them as sanitizers would hide real traversal.
+_SANITIZERS = {"shlex.quote", "pipes.quote"}
 
 # Annotations that constrain a value enough that it is not free-form.
 _CONSTRAINED_ANNOTATION_MARKERS = (
@@ -226,6 +237,13 @@ class _Visitor(ast.NodeVisitor):
         self.lines = source.splitlines()
         self.aliases: dict[str, str] = {}  # local name -> canonical dotted origin
         self.models = models or {}
+        # AST node identity -> the Call fact recorded for it. Keyed by node rather than by line
+        # because `Path(path).write_text(body)` is two calls on one line, and a line-keyed index
+        # cannot tell the sink from its receiver.
+        self.call_index: dict[int, Call] = {}
+        # The function bodies worth running taint over, paired with the tool they implement.
+        self.tool_nodes: list[tuple[ToolDef, ast.FunctionDef | ast.AsyncFunctionDef]] = []
+        self.dispatch_nodes: list[ast.FunctionDef | ast.AsyncFunctionDef] = []
 
     # -- imports: build the alias map so dotted resolution survives renaming ---------------
     def visit_Import(self, node: ast.Import) -> None:
@@ -282,35 +300,50 @@ class _Visitor(ast.NodeVisitor):
             capability = ENV
 
         if capability:
-            self.facts.calls.append(
-                Call(
-                    # `Path(p).write_text(...)` resolves to "().write_text"; report it as the reader
-                    # would say it out loud.
-                    name=(canonical or raw).removeprefix("()."),
-                    line=line,
-                    capability=capability,
-                    shell=shell,
-                    dynamic_eval=dynamic,
-                    raw=snippet,
-                )
+            call = Call(
+                # `Path(p).write_text(...)` resolves to "().write_text"; report it as the reader
+                # would say it out loud.
+                name=(canonical or raw).removeprefix("()."),
+                line=line,
+                capability=capability,
+                shell=shell,
+                dynamic_eval=dynamic,
+                raw=snippet,
+                literal_args=_string_literals(node),
             )
+            self.facts.calls.append(call)
+            self.call_index[id(node)] = call
+        elif self._is_log_call(canonical, last, root):
+            self.facts.log_calls.append(Call(name=canonical or raw, line=line, raw=snippet))
 
         self._maybe_server(node, canonical, raw, line)
         self._maybe_schema_tool(node, canonical, raw, line)
         self._maybe_port(node, line)
         self.generic_visit(node)
 
+    def _is_log_call(self, canonical: str, last: str, root: str) -> bool:
+        if last not in _LOG_METHODS:
+            return False
+        return root in _LOG_ROOTS or "log" in root.lower() or "audit" in root.lower()
+
+    def visit_ExceptHandler(self, node: ast.ExceptHandler) -> None:
+        # `except Exception: pass` — the failure happened and left no trace of itself.
+        if all(isinstance(stmt, ast.Pass) for stmt in node.body):
+            name = _dotted(node.type) if node.type is not None else "bare except"
+            self.facts.swallowed_excepts.append((node.lineno, name or "Exception"))
+        self.generic_visit(node)
+
     def visit_Attribute(self, node: ast.Attribute) -> None:
         if self._canonical(_dotted(node)) == "os.environ":
             line = node.lineno
-            self.facts.calls.append(
-                Call(
-                    name="os.environ",
-                    line=line,
-                    capability=ENV,
-                    raw=self.lines[line - 1].strip() if line <= len(self.lines) else "",
-                )
+            call = Call(
+                name="os.environ",
+                line=line,
+                capability=ENV,
+                raw=self.lines[line - 1].strip() if line <= len(self.lines) else "",
             )
+            self.facts.calls.append(call)
+            self.call_index[id(node)] = call
         self.generic_visit(node)
 
     # -- servers ---------------------------------------------------------------------------
@@ -346,6 +379,8 @@ class _Visitor(ast.NodeVisitor):
 
         schema_node = _kwarg(node, "inputSchema") or _kwarg(node, "input_schema")
         schema = _literal(schema_node)
+        description_node = _kwarg(node, "description")
+        description = _literal(description_node)
 
         tool = ToolDef(
             name=name,
@@ -354,6 +389,8 @@ class _Visitor(ast.NodeVisitor):
             origin="python",
             schema=schema if isinstance(schema, dict) else None,
             has_schema=isinstance(schema, dict),
+            description=description if isinstance(description, str) else None,
+            description_line=description_node.lineno if description_node is not None else None,
         )
 
         if isinstance(schema, dict):
@@ -395,23 +432,33 @@ class _Visitor(ast.NodeVisitor):
 
             if attr in _DISPATCH_DECORATORS:
                 self.facts.dispatch_spans.append((node.lineno, end))
+                if attr == "call_tool":
+                    self.dispatch_nodes.append(node)
                 continue
             if attr not in _TOOL_DECORATORS:
                 continue
 
             declared = _literal(_kwarg(call, "name")) if call else None
-            self.facts.tools.append(
-                ToolDef(
-                    name=declared if isinstance(declared, str) else node.name,
-                    file=self.facts.path,
-                    line=node.lineno,
-                    origin="python",
-                    params=self._params_from_signature(node),
-                    has_schema=False,  # FastMCP infers the schema from type hints
-                    handler_start=node.lineno,
-                    handler_end=end,
-                )
+            # FastMCP shows the model the docstring when no explicit description is given, so the
+            # docstring *is* the tool description as far as prompt injection is concerned.
+            described = _literal(_kwarg(call, "description")) if call else None
+            docstring = ast.get_docstring(node)
+            description = described if isinstance(described, str) else docstring
+
+            tool = ToolDef(
+                name=declared if isinstance(declared, str) else node.name,
+                file=self.facts.path,
+                line=node.lineno,
+                origin="python",
+                params=self._params_from_signature(node),
+                has_schema=False,  # FastMCP infers the schema from type hints
+                handler_start=node.lineno,
+                handler_end=end,
+                description=description,
+                description_line=_docstring_line(node) if description is docstring else node.lineno,
             )
+            self.facts.tools.append(tool)
+            self.tool_nodes.append((tool, node))
 
     def _params_from_signature(self, node: ast.FunctionDef | ast.AsyncFunctionDef) -> list[ToolParam]:
         args = node.args
@@ -443,6 +490,229 @@ class _Visitor(ast.NodeVisitor):
             constrained=constrained,
             line=arg.lineno,
         )
+
+
+def _string_literals(node: ast.Call) -> list[str]:
+    """Every string constant this call touches: its arguments, and its receiver chain.
+
+    The receiver matters because the path of a method-style sink lives there, not in the arguments:
+    in `Path("~/.ssh/id_rsa").expanduser().read_text()` the sink is `read_text()`, which is passed
+    nothing at all. A rule asking "what file does this touch?" has to look left of the dot.
+    """
+    out: list[str] = []
+    for arg in list(node.args) + [kw.value for kw in node.keywords]:
+        if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
+            out.append(arg.value)
+        elif isinstance(arg, (ast.List, ast.Tuple)):
+            out.extend(
+                e.value for e in arg.elts if isinstance(e, ast.Constant) and isinstance(e.value, str)
+            )
+
+    if isinstance(node.func, ast.Attribute):
+        for sub in ast.walk(node.func.value):
+            if isinstance(sub, ast.Constant) and isinstance(sub.value, str):
+                out.append(sub.value)
+
+    return list(dict.fromkeys(out))
+
+
+def _docstring_line(node: ast.FunctionDef | ast.AsyncFunctionDef) -> int | None:
+    first = node.body[0] if node.body else None
+    if isinstance(first, ast.Expr) and isinstance(first.value, ast.Constant):
+        return first.lineno
+    return None
+
+
+@dataclass
+class _Tainted:
+    """A value known to derive from a tool parameter, and how it got here."""
+
+    source: str
+    steps: list[int]
+    sanitized: bool = False
+
+
+class _FlowAnalyzer:
+    """Intraprocedural taint tracking over one tool handler.
+
+    Sources are the tool's parameters — the only values in a handler the model controls. We
+    propagate them through assignments, f-strings, concatenation, `%`, `.format()` and `.join()`
+    until they reach a sink, which gives MCP05 something MCP03 does not have: proof the value the
+    model chose is the value that gets executed.
+
+    Deliberately flow-insensitive and intraprocedural. Taint that leaves through a helper function
+    call is lost, so this under-reports rather than over-reports — the right direction to be wrong
+    in for a tool people are meant to run in CI.
+    """
+
+    def __init__(self, call_index: dict[int, Call], tool_name: str) -> None:
+        self.call_index = call_index
+        self.tool_name = tool_name
+        self.tainted: dict[str, _Tainted] = {}
+        self.origins: dict[str, Call] = {}  # var -> the net/env call it was assigned from
+        # Keyed so the second propagation pass refines a flow rather than reporting it twice.
+        self._flows: dict[tuple[str, int], TaintFlow] = {}
+        self._returns: dict[tuple[int, int], ExternalReturn] = {}
+        self.args_dict: str | None = None  # the `arguments` param of a low-level dispatcher
+
+    @property
+    def flows(self) -> list[TaintFlow]:
+        return list(self._flows.values())
+
+    @property
+    def returns(self) -> list[ExternalReturn]:
+        return list(self._returns.values())
+
+    # -- taint of an expression ------------------------------------------------------------
+    def _taint_of(self, node: ast.AST | None) -> _Tainted | None:
+        if node is None:
+            return None
+        for sub in ast.walk(node):
+            if isinstance(sub, ast.Name) and sub.id in self.tainted:
+                return self.tainted[sub.id]
+            # `arguments["command"]` / `arguments.get("command")` in a low-level dispatcher: the
+            # key names the tool parameter, so the key is the source.
+            key = self._args_key(sub)
+            if key is not None:
+                return _Tainted(source=key, steps=[getattr(sub, "lineno", 0)])
+        return None
+
+    def _args_key(self, node: ast.AST) -> str | None:
+        if self.args_dict is None:
+            return None
+        if isinstance(node, ast.Subscript) and _dotted(node.value) == self.args_dict:
+            key = _literal(node.slice)
+            return key if isinstance(key, str) else None
+        if isinstance(node, ast.Call):
+            dotted = _dotted(node.func)
+            if dotted == f"{self.args_dict}.get" and node.args:
+                key = _literal(node.args[0])
+                return key if isinstance(key, str) else None
+        return None
+
+    def _origin_of(self, node: ast.AST | None) -> Call | None:
+        """The external call a value came from: a network fetch, or the environment.
+
+        Deliberately excludes local file reads. A file-reading tool returning file contents is the
+        tool doing its job; flagging it would bury the real signal — content pulled from the
+        *network*, which an attacker can rewrite between two calls, and the environment, which the
+        model has no business seeing at all.
+        """
+        if node is None:
+            return None
+        for sub in ast.walk(node):
+            if isinstance(sub, ast.Name) and sub.id in self.origins:
+                return self.origins[sub.id]
+            call = self.call_index.get(id(sub))
+            if call is not None and call.capability in (NET, ENV):
+                return call
+        return None
+
+    def _sanitizer(self, node: ast.AST | None) -> bool:
+        if not isinstance(node, ast.Call):
+            return False
+        dotted = _dotted(node.func)
+        return dotted in _SANITIZERS or dotted.rsplit(".", 1)[-1] == "quote"
+
+    # -- the walk --------------------------------------------------------------------------
+    def run(self, node: ast.FunctionDef | ast.AsyncFunctionDef, sources: list[ToolParam]) -> None:
+        for param in sources:
+            self.tainted[param.name] = _Tainted(source=param.name, steps=[param.line or node.lineno])
+
+        # Two passes: a value can be assigned from a variable defined later in a nested branch,
+        # and one extra sweep is enough to catch the chains that occur in practice without paying
+        # for a real fixpoint.
+        for _ in range(2):
+            self._walk(node)
+
+    def _walk(self, node: ast.AST) -> None:
+        for stmt in ast.walk(node):
+            if isinstance(stmt, (ast.Assign, ast.AnnAssign, ast.AugAssign)):
+                self._assign(stmt)
+            elif isinstance(stmt, ast.Call):
+                self._call(stmt)
+            elif isinstance(stmt, ast.Return):
+                self._return(stmt)
+
+    def _assign(self, stmt: ast.Assign | ast.AnnAssign | ast.AugAssign) -> None:
+        value = stmt.value
+        targets = stmt.targets if isinstance(stmt, ast.Assign) else [stmt.target]
+        names = [t.id for t in targets if isinstance(t, ast.Name)]
+        if not names:
+            return
+
+        taint = self._taint_of(value)
+        if taint is not None:
+            sanitized = taint.sanitized or self._sanitizer(value)
+            for name in names:
+                self.tainted[name] = _Tainted(
+                    source=taint.source,
+                    steps=[*taint.steps, stmt.lineno],
+                    sanitized=sanitized,
+                )
+        elif isinstance(stmt, ast.Assign):
+            # Reassigned from something untainted — the variable is clean again.
+            for name in names:
+                self.tainted.pop(name, None)
+
+        origin = self._origin_of(value)
+        if origin is not None:
+            for name in names:
+                self.origins[name] = origin
+
+    def _call(self, node: ast.Call) -> None:
+        sink = self.call_index.get(id(node))
+        if sink is None or sink.capability not in (EXEC, FS_READ, FS_WRITE):
+            return
+
+        for arg in self._sink_arguments(node, sink):
+            taint = self._taint_of(arg)
+            if taint is None:
+                continue
+            self._flows[(taint.source, sink.line)] = TaintFlow(
+                source=taint.source,
+                sink=sink,
+                tool=self.tool_name,
+                steps=[*taint.steps, node.lineno],
+                proven=True,
+                sanitized=taint.sanitized,
+            )
+            return  # one flow per sink is enough to make the point
+
+    def _sink_arguments(self, node: ast.Call, sink: Call) -> list[ast.expr]:
+        """The argument positions where taint actually means something, for this kind of sink.
+
+        Not every argument of a dangerous call is dangerous. `Path(p).write_text(body)` is a
+        traversal risk because of `p`, not because of `body` — the content of a file the caller
+        already chose to write is not the vulnerability. Likewise `subprocess.run(["make", target])`
+        passes `target` as an argument to a fixed program, which is not command injection.
+        """
+        if sink.capability in (FS_READ, FS_WRITE):
+            method = sink.name.rsplit(".", 1)[-1]
+            if method in _FS_WRITE_METHODS or method in _FS_READ_METHODS:
+                # `Path(p).read_text()` — the path is the receiver, and the arguments are content.
+                return [node.func.value] if isinstance(node.func, ast.Attribute) else []
+            # `open(p)`, `os.remove(p)`, `shutil.copy(src, dst)` — the leading arguments are paths.
+            return list(node.args[:2])
+
+        if sink.capability == EXEC and not sink.shell and not sink.dynamic_eval:
+            # argv-style exec: only the program slot is an injection; the rest are its arguments.
+            first = node.args[0] if node.args else None
+            if first is None:
+                return []
+            if isinstance(first, (ast.List, ast.Tuple)):
+                return [first.elts[0]] if first.elts else []
+            return [first]
+
+        # A shell or an evaluator parses whatever it is handed, wherever it sits.
+        return list(node.args) + [kw.value for kw in node.keywords]
+
+    def _return(self, stmt: ast.Return) -> None:
+        origin = self._origin_of(stmt.value)
+        if origin is not None:
+            self._returns[(origin.line, stmt.lineno)] = ExternalReturn(
+                origin=origin, line=stmt.lineno, tool=self.tool_name or None
+            )
 
 
 def _python_type_to_schema_type(annotation: str | None) -> str | None:
@@ -490,6 +760,34 @@ def params_from_json_schema(schema: dict, line: int) -> list[ToolParam]:
     return params
 
 
+def _args_dict_param(node: ast.FunctionDef | ast.AsyncFunctionDef) -> str | None:
+    """The dict of tool arguments in `async def call_tool(name, arguments)` — the model's input."""
+    args = [a.arg for a in node.args.posonlyargs + node.args.args]
+    for candidate in ("arguments", "args", "params", "kwargs"):
+        if candidate in args:
+            return candidate
+    return args[-1] if len(args) >= 2 else None
+
+
+def _analyze_flows(visitor: _Visitor, facts: SourceFacts) -> None:
+    """Run taint over every handler, and record what leaves through its return."""
+    for tool, node in visitor.tool_nodes:
+        analyzer = _FlowAnalyzer(visitor.call_index, tool.name)
+        analyzer.run(node, tool.params)
+        facts.taint_flows.extend(analyzer.flows)
+        facts.external_returns.extend(analyzer.returns)
+
+    for node in visitor.dispatch_nodes:
+        # A low-level dispatcher implements every tool in one function, so the flow can't be
+        # attributed to a tool by span. The `arguments["x"]` key names the parameter instead, and
+        # the rule matches it back to whichever tool declares it.
+        analyzer = _FlowAnalyzer(visitor.call_index, "")
+        analyzer.args_dict = _args_dict_param(node)
+        analyzer.run(node, [])
+        facts.taint_flows.extend(analyzer.flows)
+        facts.external_returns.extend(analyzer.returns)
+
+
 def parse_python(path: str, source: str) -> SourceFacts:
     facts = SourceFacts(path=path, language="python")
     try:
@@ -499,5 +797,7 @@ def parse_python(path: str, source: str) -> SourceFacts:
         return facts
 
     # Models first: a tool can reference a schema class defined below it in the file.
-    _Visitor(facts, source, _collect_pydantic_models(tree)).visit(tree)
+    visitor = _Visitor(facts, source, _collect_pydantic_models(tree))
+    visitor.visit(tree)
+    _analyze_flows(visitor, facts)
     return facts

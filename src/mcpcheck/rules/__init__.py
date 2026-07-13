@@ -6,8 +6,13 @@ from . import (  # noqa: F401  (imported for the registration side effect)
     mcp01_secrets,
     mcp02_scope,
     mcp03_tool_poisoning,
+    mcp04_supply_chain,
+    mcp05_command_injection,
+    mcp06_prompt_injection,
     mcp07_auth,
+    mcp08_audit,
     mcp09_shadow_servers,
+    mcp10_context,
 )
 from .base import REGISTRY, Rule, rule
 

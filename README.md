@@ -11,7 +11,7 @@ No API key. No network calls. No account. `mcpcheck scan .` and you have your an
 
 ## Example run
 
-A real scan of `tests/fixtures/vulnerable_ts` — a 30-line TypeScript MCP server. Nine findings in
+A real scan of `tests/fixtures/vulnerable_ts` — a 30-line TypeScript MCP server. Fifteen findings in
 under 10 ms. Reproduce it yourself with the command below; nothing here is mocked up.
 
 ```console
@@ -54,6 +54,18 @@ $ mcpcheck scan tests/fixtures/vulnerable_ts
   and require explicit approval.
   CWE-78 · confidence 90%
 
+ CRITICAL  MCP05 Command Injection & Execution  [MCP05-001]
+  Tool input `command` is executed by a shell
+  src/server.ts:16
+  │ const output = exec(command);
+  `command` reaches `exec` at src/server.ts:16, which runs it through a command interpreter.
+  The model chooses `command`, and anything that can influence the model — a poisoned
+  document, a web page it fetched, a file in the workspace — chooses it in turn. This is not a
+  co-location: the value is tracked from `run_build`'s parameter into the sink.
+  Fix: Do not build a shell string. Pass the command as an argument list (`execFile`) so the
+  value can never be parsed as syntax.
+  CWE-78 · confidence 70%
+
  CRITICAL  MCP07 Insufficient Authentication & Authorization  [MCP07-001]
   `mcp.json` exposes a network server with no authentication
   mcp.json:1
@@ -78,14 +90,16 @@ $ mcpcheck scan tests/fixtures/vulnerable_ts
   default.
   CWE-1059 · confidence 70%
 
-  [ 2 more HIGH (fs:write beyond scope, wildcard CORS) and 2 MEDIUM omitted here ]
+  [ 5 more HIGH (fs:write beyond scope, wildcard CORS, tainted path write, git dependency,
+    install hook) and 4 MEDIUM (no schema, unvalidated param, floating deps, no audit log)
+    omitted here ]
 
 Severity  Count
-CRITICAL      4
-HIGH          3
-MEDIUM        2
+CRITICAL      5
+HIGH          6
+MEDIUM        4
 
-9 finding(s) across 2 files (12 rules, 0.00s)
+15 finding(s) across 3 files (26 rules, 0.00s)
 ```
 
 Four things that run demonstrates, in order of how much they matter:
@@ -97,6 +111,9 @@ Four things that run demonstrates, in order of how much they matter:
   declaration and the implementation quietly exceeds it.
 - **`run_build` is the one that gets you owned.** `command` is a bare `z.string()` landing in
   `exec()`. Anything that can influence the model's tool call chooses what runs on your machine.
+  MCP03-001 flags the co-location; MCP05-001 tracks the value from the parameter into the shell and
+  reports the *flow* — with the AST-level taint tracking that, in Python, proves it rather than
+  matching a name.
 - **Confidence is reported honestly** — 90% on the co-location check, 65% on the `path` heuristic —
   because one is near-certain and the other is a pattern that is only *usually* a problem.
 
@@ -131,10 +148,10 @@ drops into CI unchanged:
 
 Suppress a finding you've reviewed by putting `mcpcheck:ignore` on the line.
 
-## What v0.1 checks
+## What it checks
 
-Five of the ten OWASP MCP Top 10 risks — the five that are both high-signal and statically
-decidable. The other five are on the roadmap below; this table is the honest scope.
+All ten OWASP MCP Top 10 risks, across 26 rules. Findings carry a CWE id and a confidence score, and
+every one tells you how to fix it. Full detail per rule in [docs/rules.md](docs/rules.md).
 
 | Risk | Rule | What fires |
 |------|------|-----------|
@@ -146,12 +163,24 @@ decidable. The other five are on the roadmap below; this table is the honest sco
 | | `MCP03-002` | An input schema permits `additionalProperties`, so callers can smuggle fields the handler never validates. |
 | | `MCP03-003` | A risky parameter has no `enum`, `pattern`, or `maxLength`. |
 | | `MCP03-004` | A tool is declared with no input schema at all. |
+| **MCP04** Supply Chain | `MCP04-001` | A dependency is installed from a git ref, URL, or path rather than an immutable registry release — the bytes can change between review and install. |
+| | `MCP04-002` | Registry dependencies float and no lockfile records what they resolved to. |
+| | `MCP04-003` | An npm install hook runs code before anyone reads the package. |
+| **MCP05** Command Injection | `MCP05-001` | A tool parameter **demonstrably reaches** a shell — proven by AST-level taint tracking in Python, name-matched at lower confidence in TS. This is the flow MCP03-001 only co-locates. |
+| | `MCP05-002` | A tool parameter reaches `eval` / `exec` / `new Function`. |
+| | `MCP05-003` | A tool parameter reaches a filesystem path with no confinement to a root. |
+| **MCP06** Prompt Injection | `MCP06-001` | A tool *description* instructs the model — discard prior instructions, hide behaviour from the user, read a credential file. The description is loaded into context as instructions. |
+| | `MCP06-002` | Invisible or bidi-override characters in a description, so the reviewed text and the model's text differ. |
+| | `MCP06-003` | A tool returns fetched network content straight to the model. |
 | **MCP07** Insufficient AuthN/AuthZ | `MCP07-001` | A **network-exposed** server (HTTP/SSE transport, or a bound port) declares no authentication. Deliberately silent on stdio servers — they're spawned as a subprocess by their client and have no socket to protect. |
 | | `MCP07-002` | Wildcard CORS origin, in the manifest or in code. |
+| **MCP08** Audit & Telemetry | `MCP08-001` | A server that executes commands or writes files logs nothing, so a poisoned call leaves no trail. |
+| | `MCP08-002` | An `except: pass` in code that acts, hiding failures from any investigation. |
 | **MCP09** Shadow Servers | `MCP09-001` | More than one MCP server is constructed in the codebase. The extra ones expose tools under the same privileges, usually without the review the primary server got. |
 | | `MCP09-002` | Code binds a port that no manifest declares. |
-
-Findings carry a CWE id and a confidence score, and every one of them tells you how to fix it.
+| **MCP10** Context Over-Sharing | `MCP10-001` | A tool returns the environment (`os.environ`, `process.env`) — where the credentials live — to the model. |
+| | `MCP10-002` | Code touches a path holding SSH keys, cloud credentials, or system accounts. |
+| | `MCP10-003` | A file operation is rooted at `/`, a home directory, or a drive root. |
 
 ## How it works, and where it stops
 
@@ -164,22 +193,25 @@ use, which is resolved back to the model's fields. Capabilities are attributed t
 handler span contains them, falling back to the `@server.call_tool()` dispatcher for low-level
 servers that implement every tool in one function.
 
-**TypeScript/JavaScript is parsed lexically, not with a real AST.** v0.1 deliberately avoids a
+**Python taint tracking is real, and intraprocedural.** MCP05 follows a tool parameter through
+assignments, f-strings, `%`, `.format()`, `.join()`, and concatenation into a sink, so it reports a
+*flow* — the model's value reaching the shell — rather than the co-location MCP03-001 settles for.
+It is deliberately intraprocedural: taint that escapes through a helper call is not tracked, so the
+analysis under-reports rather than over-reports, which is the right way to be wrong for a tool meant
+to run in CI. A parameter constrained to an `enum`/`Literal` never taints, and `shlex.quote` clears
+the flow.
+
+**TypeScript/JavaScript is parsed lexically, not with a real AST.** It deliberately avoids a
 Node/`tsc` dependency so that `pip install mcpcheck` is the entire install story. The parser is
 brace-aware — it pulls complete zod and JSON Schema literals out of source, and it understands both
 the high-level `server.tool(name, schema, handler)` shape and the low-level
 `setRequestHandler(CallToolRequestSchema, …)` dispatcher. **It will miss aliased imports and
-computed names in a way the Python parser does not.** Moving TS to the TypeScript compiler API is
-the top item for v0.2.
+computed names in a way the Python parser does not**, and its MCP05 taint is a name match rather than
+a proof of flow — reported at lower confidence and marked `proven=false`. Moving TS to the TypeScript
+compiler API is the top item for the next version.
 
-**There is no taint analysis.** MCP03-001 pairs a dangerous parameter with a dangerous sink in the
-same handler; it does not prove the value flows from one to the other. That's a deliberate v0.1
-tradeoff — it's why the rule reports 90% confidence rather than certainty. Full dataflow (and with
-it, MCP05 Command Injection) needs a real IR.
-
-**Not yet implemented:** MCP04 (supply chain), MCP05 (command injection with dataflow), MCP06
-(prompt injection), MCP08 (audit logging), MCP10 (context over-sharing). No dynamic analysis: the
-scanner never executes the server it's auditing.
+**No dynamic analysis:** the scanner never executes the server it's auditing. Everything is read from
+manifest, config, and source.
 
 ## False positives
 
