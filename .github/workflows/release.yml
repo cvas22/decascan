@@ -1,0 +1,33 @@
+name: release
+
+# Publishes to PyPI when you publish a GitHub Release. Uses Trusted Publishing (OIDC): PyPI is
+# configured to trust this repo + workflow + environment, so no API token is stored anywhere.
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  pypi:
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/p/mcp-sift
+    permissions:
+      id-token: write # the OIDC token PyPI verifies; this replaces a username/password
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: astral-sh/setup-uv@v5
+
+      # Build both sdist and wheel into dist/ from the tagged commit.
+      - name: build distributions
+        run: uv build
+
+      # No token needed: with id-token:write present and a matching Trusted Publisher on PyPI,
+      # the action mints and exchanges an OIDC token automatically. Uploads everything in dist/.
+      - name: publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
