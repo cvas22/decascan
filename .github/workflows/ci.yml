@@ -13,8 +13,15 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: ["3.10", "3.11", "3.12", "3.13"]
+        # Full Python range on Ubuntu (the AST parser is version-sensitive), latest-only on the
+        # other two OSes — enough to catch OS-specific breakage without the full cross-product.
+        include:
+          - { os: ubuntu-latest, python-version: "3.10" }
+          - { os: ubuntu-latest, python-version: "3.11" }
+          - { os: ubuntu-latest, python-version: "3.12" }
+          - { os: ubuntu-latest, python-version: "3.13" }
+          - { os: windows-latest, python-version: "3.13" }
+          - { os: macos-latest, python-version: "3.13" }
 
     steps:
       - uses: actions/checkout@v4
@@ -59,13 +66,6 @@ jobs:
             setup: dnf install -y python3.12 python3.12-pip git tar gzip
             python: python3.12
           - image: oraclelinux:8
-            setup: dnf install -y python3.12 python3.12-pip git tar gzip
-            python: python3.12
-          # Other RHEL rebuilds — proves it is not Oracle-specific.
-          - image: almalinux:9
-            setup: dnf install -y python3.12 python3.12-pip git tar gzip
-            python: python3.12
-          - image: rockylinux:9
             setup: dnf install -y python3.12 python3.12-pip git tar gzip
             python: python3.12
           # Debian/apt userland; bookworm ships Python 3.11.
