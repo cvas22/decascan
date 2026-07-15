@@ -6,13 +6,15 @@ on:
   pull_request:
 
 jobs:
+  # Native GitHub-hosted VMs: the three OSes GitHub gives a real machine for, across every
+  # Python the project supports (requires-python >=3.10).
   test:
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest]
-        python-version: ["3.10", "3.12"]
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
 
     steps:
       - uses: actions/checkout@v4
@@ -37,3 +39,75 @@ jobs:
 
       - name: scan the clean fixture (expect none)
         run: mcpcheck scan tests/fixtures/clean_python
+
+      - name: build wheel
+        run: |
+          python -m pip install build
+          python -m build --wheel
+
+  # Linux distro userlands people actually `pip install mcpcheck` onto. All run on an Ubuntu host
+  # but inside the distro's container, so glibc-vs-musl and dnf/apt/apk differences are exercised.
+  # The RHEL family (Oracle/Alma/Rocky) shares a userland — a representative spread, not every clone.
+  linux-distros:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Oracle Linux — both current majors; OL ships Python 3.9, so pull the 3.12 module.
+          - image: oraclelinux:9
+            setup: dnf install -y python3.12 python3.12-pip git tar gzip
+            python: python3.12
+          - image: oraclelinux:8
+            setup: dnf install -y python3.12 python3.12-pip git tar gzip
+            python: python3.12
+          # Other RHEL rebuilds — proves it is not Oracle-specific.
+          - image: almalinux:9
+            setup: dnf install -y python3.12 python3.12-pip git tar gzip
+            python: python3.12
+          - image: rockylinux:9
+            setup: dnf install -y python3.12 python3.12-pip git tar gzip
+            python: python3.12
+          # Debian/apt userland; bookworm ships Python 3.11.
+          - image: debian:12
+            setup: apt-get update && apt-get install -y python3 python3-venv python3-pip git
+            python: python3
+          # Alpine/musl — the one most likely to surface a packaging bug the glibc jobs miss.
+          - image: python:3.12-alpine
+            setup: apk add --no-cache git bash
+            python: python3
+    container:
+      image: ${{ matrix.image }}
+    steps:
+      - name: install prerequisites
+        run: ${{ matrix.setup }}
+
+      - uses: actions/checkout@v4
+
+      # A venv keeps the console script (`mcpcheck`) and the dogfood steps on PATH for every later
+      # step via GITHUB_PATH, without re-activating in each `run`.
+      - name: create venv and install
+        run: |
+          ${{ matrix.python }} -m venv /opt/venv
+          echo "/opt/venv/bin" >> "$GITHUB_PATH"
+          /opt/venv/bin/python -m pip install --upgrade pip
+          /opt/venv/bin/pip install -e ".[dev]"
+
+      - name: lint
+        run: ruff check src tests
+
+      - name: test
+        run: pytest -q
+
+      - name: scan the vulnerable fixture (expect findings)
+        run: |
+          mcpcheck scan tests/fixtures/vulnerable_python && exit 1
+          echo "exited non-zero as expected"
+
+      - name: scan the clean fixture (expect none)
+        run: mcpcheck scan tests/fixtures/clean_python
+
+      - name: build wheel
+        run: |
+          python -m pip install build
+          python -m build --wheel
