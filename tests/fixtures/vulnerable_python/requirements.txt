@@ -1,4 +1,4 @@
-# Intentionally bad dependency hygiene. Fixture for mcpcheck tests — do not install.
+# Intentionally bad dependency hygiene. Fixture for mcp-sift tests — do not install.
 httpx>=0.27
 mcp>=1.0
 pyyaml>=6.0

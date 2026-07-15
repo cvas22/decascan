@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "mcpcheck"
+name = "mcp-sift"
 version = "0.1.0"
 description = "OWASP MCP Top 10 security scanner for Model Context Protocol servers"
 readme = "README.md"
@@ -35,14 +35,14 @@ dev = [
 ]
 
 [project.scripts]
-mcpcheck = "mcpcheck.cli:main"
+mcp-sift = "mcp_sift.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/cvas22/mcpcheck"
-Issues = "https://github.com/cvas22/mcpcheck/issues"
+Homepage = "https://github.com/cvas22/mcp-sift"
+Issues = "https://github.com/cvas22/mcp-sift/issues"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/mcpcheck"]
+packages = ["src/mcp_sift"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

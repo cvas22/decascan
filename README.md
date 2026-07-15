@@ -1,13 +1,13 @@
-# mcpcheck
+# mcp-sift
 
 **A security scanner for Model Context Protocol servers, mapped to the OWASP MCP Top 10.**
 
 MCP servers run with the privileges of the developer who installed them: they read files, call
 internal APIs, and execute commands on behalf of an LLM that anything in its context window can
-influence. `mcpcheck` reads a server's manifest, config, and source and tells you where that trust
+influence. `mcp-sift` reads a server's manifest, config, and source and tells you where that trust
 is misplaced — before you ship it.
 
-No API key. No network calls. No account. `mcpcheck scan .` and you have your answer.
+No API key. No network calls. No account. `mcp-sift scan .` and you have your answer.
 
 ## Example run
 
@@ -15,7 +15,7 @@ A real scan of `tests/fixtures/vulnerable_ts` — a 30-line TypeScript MCP serve
 under 10 ms. Reproduce it yourself with the command below; nothing here is mocked up.
 
 ```console
-$ mcpcheck scan tests/fixtures/vulnerable_ts
+$ mcp-sift scan tests/fixtures/vulnerable_ts
 
  CRITICAL  MCP01 Token Mismanagement & Secret Exposure  [MCP01-001]
   GitHub token committed to source
@@ -117,36 +117,36 @@ Four things that run demonstrates, in order of how much they matter:
 - **Confidence is reported honestly** — 90% on the co-location check, 65% on the `path` heuristic —
   because one is near-certain and the other is a pattern that is only *usually* a problem.
 
-By contrast, `mcpcheck scan tests/fixtures/clean_python` prints a green "No findings" and exits `0`,
+By contrast, `mcp-sift scan tests/fixtures/clean_python` prints a green "No findings" and exits `0`,
 and so do the real `mcp-server-fetch` and `mcp-server-time`.
 
 ## Install
 
 ```bash
-pip install mcpcheck
+pip install mcp-sift
 ```
 
 ## Use
 
 ```bash
-mcpcheck scan ./server              # human-readable
-mcpcheck scan ./server -o json      # for pipelines
-mcpcheck scan ./server -o sarif -f results.sarif   # for GitHub Code Scanning
-mcpcheck rules                      # what it checks and why
+mcp-sift scan ./server              # human-readable
+mcp-sift scan ./server -o json      # for pipelines
+mcp-sift scan ./server -o sarif -f results.sarif   # for GitHub Code Scanning
+mcp-sift rules                      # what it checks and why
 ```
 
-`mcpcheck scan` exits `1` when it finds something at or above `--fail-on` (default: `high`), so it
+`mcp-sift scan` exits `1` when it finds something at or above `--fail-on` (default: `high`), so it
 drops into CI unchanged:
 
 ```yaml
-- run: pip install mcpcheck
-- run: mcpcheck scan . --output sarif --output-file mcpcheck.sarif --no-fail
+- run: pip install mcp-sift
+- run: mcp-sift scan . --output sarif --output-file mcp-sift.sarif --no-fail
 - uses: github/codeql-action/upload-sarif@v3
   with:
-    sarif_file: mcpcheck.sarif
+    sarif_file: mcp-sift.sarif
 ```
 
-Suppress a finding you've reviewed by putting `mcpcheck:ignore` on the line.
+Suppress a finding you've reviewed by putting `mcp-sift:ignore` on the line.
 
 ## What it checks
 
@@ -202,7 +202,7 @@ to run in CI. A parameter constrained to an `enum`/`Literal` never taints, and `
 the flow.
 
 **TypeScript/JavaScript is parsed lexically, not with a real AST.** It deliberately avoids a
-Node/`tsc` dependency so that `pip install mcpcheck` is the entire install story. The parser is
+Node/`tsc` dependency so that `pip install mcp-sift` is the entire install story. The parser is
 brace-aware — it pulls complete zod and JSON Schema literals out of source, and it understands both
 the high-level `server.tool(name, schema, handler)` shape and the low-level
 `setRequestHandler(CallToolRequestSchema, …)` dispatcher. **It will miss aliased imports and
@@ -238,7 +238,7 @@ uv pip install -e ".[dev]"
 pytest
 ```
 
-Rules live in `src/mcpcheck/rules/`, one module per OWASP risk. A rule is a function from a
+Rules live in `src/mcp_sift/rules/`, one module per OWASP risk. A rule is a function from a
 `ScanContext` to `Finding`s, registered with a decorator — see `rules/base.py`. Parsers normalize
 every language into the shared vocabulary in `parsers/common.py`, so rules never care whether a
 server is Python or TypeScript.

@@ -7,8 +7,8 @@ from pathlib import Path
 
 import pytest
 
-from mcpcheck.core.scanner import scan
-from mcpcheck.outputs import json_out, sarif
+from mcp_sift.core.scanner import scan
+from mcp_sift.outputs import json_out, sarif
 
 FIXTURES = Path(__file__).parent / "fixtures"
 
@@ -20,7 +20,7 @@ def result():
 
 def test_json_output_is_valid_and_complete(result):
     payload = json.loads(json_out.render(result))
-    assert payload["tool"] == "mcpcheck"
+    assert payload["tool"] == "mcp-sift"
     assert payload["summary"]["findings"] == len(result.findings)
     assert payload["summary"]["by_severity"]["critical"] > 0
     assert {"rule_id", "mcp_id", "severity", "file_path", "remediation"} <= set(
@@ -33,7 +33,7 @@ def test_sarif_is_2_1_0_and_maps_rules(result):
     assert payload["version"] == "2.1.0"
 
     run = payload["runs"][0]
-    assert run["tool"]["driver"]["name"] == "mcpcheck"
+    assert run["tool"]["driver"]["name"] == "mcp-sift"
 
     declared = {r["id"] for r in run["tool"]["driver"]["rules"]}
     referenced = {r["ruleId"] for r in run["results"]}
@@ -42,7 +42,7 @@ def test_sarif_is_2_1_0_and_maps_rules(result):
     for entry in run["results"]:
         assert entry["level"] in {"error", "warning", "note"}
         assert entry["locations"][0]["physicalLocation"]["artifactLocation"]["uri"]
-        assert entry["partialFingerprints"]["mcpcheckFingerprint/v1"]
+        assert entry["partialFingerprints"]["mcp-siftFingerprint/v1"]
         assert entry["properties"]["security-severity"]
 
 

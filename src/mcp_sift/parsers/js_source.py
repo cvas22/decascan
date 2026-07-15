@@ -1,7 +1,7 @@
 """Extract the same facts from TypeScript/JavaScript MCP servers.
 
 This is a lexical parser, not a real AST: v0.1 deliberately avoids a Node/tsc dependency so that
-`pip install mcpcheck` is the whole install story. It is brace-aware (so it can pull complete
+`pip install mcp-sift` is the whole install story. It is brace-aware (so it can pull complete
 schema object literals out of source) and understands the two dominant SDK shapes — the high-level
 `server.tool(name, schema, handler)` registration and the low-level
 `setRequestHandler(ListToolsRequestSchema, ...)` + `CallToolRequestSchema` dispatcher.

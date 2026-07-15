@@ -1,4 +1,4 @@
-"""`mcpcheck` command line."""
+"""`mcp-sift` command line."""
 
 from __future__ import annotations
 
@@ -23,7 +23,7 @@ EXIT_ERROR = 2
 
 
 @click.group(context_settings={"help_option_names": ["-h", "--help"]})
-@click.version_option(__version__, prog_name="mcpcheck")
+@click.version_option(__version__, prog_name="mcp-sift")
 def main() -> None:
     """Audit an MCP server against the OWASP MCP Top 10."""
 
@@ -111,7 +111,7 @@ def scan_command(
 def rules_command() -> None:
     """List the built-in rules and the OWASP risks they map to."""
     console = Console()
-    console.print(f"\n[bold]mcpcheck {__version__}[/bold] — OWASP MCP Top 10 v{OWASP_MCP_TOP10_VERSION}\n")
+    console.print(f"\n[bold]mcp-sift {__version__}[/bold] — OWASP MCP Top 10 v{OWASP_MCP_TOP10_VERSION}\n")
 
     current = None
     for rule in all_rules():

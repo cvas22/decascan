@@ -41,18 +41,18 @@ jobs:
       - name: scan the vulnerable fixture (expect findings)
         shell: bash
         run: |
-          mcpcheck scan tests/fixtures/vulnerable_python && exit 1
+          mcp-sift scan tests/fixtures/vulnerable_python && exit 1
           echo "exited non-zero as expected"
 
       - name: scan the clean fixture (expect none)
-        run: mcpcheck scan tests/fixtures/clean_python
+        run: mcp-sift scan tests/fixtures/clean_python
 
       - name: build wheel
         run: |
           python -m pip install build
           python -m build --wheel
 
-  # Linux distro userlands people actually `pip install mcpcheck` onto. All run on an Ubuntu host
+  # Linux distro userlands people actually `pip install mcp-sift` onto. All run on an Ubuntu host
   # but inside the distro's container, so glibc-vs-musl and dnf/apt/apk differences are exercised.
   # The RHEL family (Oracle/Alma/Rocky) shares a userland — a representative spread, not every clone.
   linux-distros:
@@ -84,7 +84,7 @@ jobs:
 
       - uses: actions/checkout@v4
 
-      # A venv keeps the console script (`mcpcheck`) and the dogfood steps on PATH for every later
+      # A venv keeps the console script (`mcp-sift`) and the dogfood steps on PATH for every later
       # step via GITHUB_PATH, without re-activating in each `run`.
       - name: create venv and install
         run: |
@@ -101,11 +101,11 @@ jobs:
 
       - name: scan the vulnerable fixture (expect findings)
         run: |
-          mcpcheck scan tests/fixtures/vulnerable_python && exit 1
+          mcp-sift scan tests/fixtures/vulnerable_python && exit 1
           echo "exited non-zero as expected"
 
       - name: scan the clean fixture (expect none)
-        run: mcpcheck scan tests/fixtures/clean_python
+        run: mcp-sift scan tests/fixtures/clean_python
 
       - name: build wheel
         run: |

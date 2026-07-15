@@ -11,7 +11,7 @@ from .config import ScanConfig
 from .context import ScanContext, build_context
 from .findings import Finding, Severity
 
-SUPPRESSION_MARKERS = ("mcpcheck:ignore", "mcpcheck: ignore", "nosec mcpcheck")
+SUPPRESSION_MARKERS = ("mcp-sift:ignore", "mcp-sift: ignore", "nosec mcp-sift")
 
 
 @dataclass

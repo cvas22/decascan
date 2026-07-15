@@ -1,6 +1,6 @@
 """A well-behaved MCP server: stdio transport, declared scopes, constrained inputs.
 
-mcpcheck should find nothing here. If a change to the rules makes this file light up, the change
+mcp-sift should find nothing here. If a change to the rules makes this file light up, the change
 has a false-positive problem.
 """
 
