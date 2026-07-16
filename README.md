@@ -114,8 +114,8 @@ Four things that run demonstrates, in order of how much they matter:
   MCP03-001 flags the co-location; MCP05-001 tracks the value from the parameter into the shell and
   reports the *flow* — with the AST-level taint tracking that, in Python, proves it rather than
   matching a name.
-- **Confidence is reported honestly** — 90% on the co-location check, 65% on the `path` heuristic —
-  because one is near-certain and the other is a pattern that is only *usually* a problem.
+- **Confidence is reported honestly** — 90% on the co-location check, 70% on the name-matched TS
+  flow — because one is near-certain and the other is a pattern that is only *usually* a problem.
 
 By contrast, `mcp-sift scan tests/fixtures/clean_python` prints a green "No findings" and exits `0`,
 and so do the real `mcp-server-fetch` and `mcp-server-time`.
@@ -151,7 +151,8 @@ Suppress a finding you've reviewed by putting `mcp-sift:ignore` on the line.
 ## What it checks
 
 All ten OWASP MCP Top 10 risks, across 26 rules. Findings carry a CWE id and a confidence score, and
-every one tells you how to fix it. Full detail per rule in [docs/rules.md](docs/rules.md).
+every one tells you how to fix it. Full detail per rule in
+[docs/rules.md](https://github.com/cvas22/mcp-sift/blob/main/docs/rules.md).
 
 | Risk | Rule | What fires |
 |------|------|-----------|
