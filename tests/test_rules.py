@@ -98,6 +98,68 @@ def test_granted_capability_is_not_flagged(vulnerable_python):
     assert read_hits == []
 
 
+_SERVER_THAT_EXECS = (
+    "import subprocess\n"
+    "from mcp.server.fastmcp import FastMCP\n"
+    "mcp = FastMCP('x')\n"
+    "@mcp.tool()\n"
+    "def run_cmd(command: str) -> str:\n"
+    "    return subprocess.run(command, shell=True).stdout\n"
+)
+
+
+def test_wildcard_scope_grants_every_capability(tmp_path):
+    """A `*` scope is an admin grant — the diff is empty, so no MCP02-001 even though it execs."""
+    (tmp_path / ".mcp.json").write_text(
+        '{"name": "x", "scopes": ["*"], "tools": [{"name": "run_cmd"}]}'
+    )
+    (tmp_path / "server.py").write_text(_SERVER_THAT_EXECS)
+    assert findings_for(scan(tmp_path), "MCP02-001") == []
+
+
+def test_per_tool_scope_grant_covers_the_capability(tmp_path):
+    """Server scopes are read-only, but the tool declares `exec` — so its exec is honestly granted."""
+    (tmp_path / "server.py").write_text(_SERVER_THAT_EXECS)
+
+    # Without the per-tool grant, exec exceeds the server's read:files scope and is flagged.
+    (tmp_path / ".mcp.json").write_text(
+        '{"name": "x", "scopes": ["read:files"], "tools": [{"name": "run_cmd"}]}'
+    )
+    ungranted = findings_for(scan(tmp_path), "MCP02-001")
+    assert any(f.metadata.get("capability") == "exec" for f in ungranted)
+
+    # Declaring the scope on the tool itself covers it — the grant is honest, so nothing to report.
+    (tmp_path / ".mcp.json").write_text(
+        '{"name": "x", "scopes": ["read:files"],'
+        ' "tools": [{"name": "run_cmd", "scopes": ["exec"]}]}'
+    )
+    granted = findings_for(scan(tmp_path), "MCP02-001")
+    assert all(f.metadata.get("capability") != "exec" for f in granted)
+
+
+def test_tools_declared_without_any_scopes_is_flagged_at_info(tmp_path):
+    """No scopes anywhere to diff against — MCP02-002 says so at INFO rather than staying silent."""
+    (tmp_path / ".mcp.json").write_text('{"name": "x", "tools": [{"name": "run_cmd"}]}')
+    (tmp_path / "server.py").write_text(_SERVER_THAT_EXECS)
+    hits = findings_for(scan(tmp_path), "MCP02-002")
+    assert len(hits) == 1
+    assert hits[0].severity == Severity.INFO
+    assert "no scopes" in hits[0].title
+
+
+def test_no_scopes_but_no_sensitive_capability_stays_silent(tmp_path):
+    """Missing scopes only matter if the code does something worth scoping — otherwise no INFO."""
+    (tmp_path / ".mcp.json").write_text('{"name": "x", "tools": [{"name": "greet"}]}')
+    (tmp_path / "server.py").write_text(
+        "from mcp.server.fastmcp import FastMCP\n"
+        "mcp = FastMCP('x')\n"
+        "@mcp.tool()\n"
+        "def greet(name: str) -> str:\n"
+        "    return 'hello ' + name\n"
+    )
+    assert findings_for(scan(tmp_path), "MCP02-002") == []
+
+
 # --- MCP03: tool poisoning ----------------------------------------------------------------
 
 
