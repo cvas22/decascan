@@ -368,8 +368,9 @@ assignments, f-strings, `%`, `.format()`, `.join()`, and concatenation into a si
 *flow* — the model's value reaching the shell — rather than the co-location MCP03-001 settles for.
 It is deliberately intraprocedural: taint that escapes through a helper call is not tracked, so the
 analysis under-reports rather than over-reports, which is the right way to be wrong for a tool meant
-to run in CI. A parameter constrained to an `enum`/`Literal` never taints, and `shlex.quote` clears
-the flow.
+to run in CI. A parameter constrained to an `enum`/`Literal` never taints, and a value that is passed through
+`shlex.quote` and assigned to a variable before it reaches the sink is treated as clean. Quoting
+inline inside the call (`'echo ' + shlex.quote(cmd)`) is not recognised, so that form is still reported.
 
 **TypeScript/JavaScript is parsed lexically, not with a real AST.** It deliberately avoids a
 Node/`tsc` dependency so that `pip install mcp-sift` is the entire install story. The parser is

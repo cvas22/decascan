@@ -7,7 +7,6 @@ sp.run(...)` and `from subprocess import run; run(...)` both land on the same ca
 from __future__ import annotations
 
 import ast
-from collections import deque
 from dataclasses import dataclass
 
 from .common import (
@@ -610,11 +609,7 @@ class _FlowAnalyzer:
     def _taint_of(self, node: ast.AST | None) -> _Tainted | None:
         if node is None:
             return None
-        todo = deque([node])  # breadth-first, like ast.walk, but able to skip a subtree
-        while todo:
-            sub = todo.popleft()
-            if isinstance(sub, ast.Call) and self._sanitizer(sub):
-                continue  # `shlex.quote(cmd)` is clean wherever it appears, inline or assigned first
+        for sub in ast.walk(node):
             if isinstance(sub, ast.Name) and sub.id in self.tainted:
                 return self.tainted[sub.id]
             # `arguments["command"]` / `arguments.get("command")` in a low-level dispatcher: the
@@ -622,7 +617,6 @@ class _FlowAnalyzer:
             key = self._args_key(sub)
             if key is not None:
                 return _Tainted(source=key, steps=[getattr(sub, "lineno", 0)])
-            todo.extend(ast.iter_child_nodes(sub))
         return None
 
     def _args_key(self, node: ast.AST) -> str | None:

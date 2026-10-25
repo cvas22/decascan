@@ -45,12 +45,6 @@ All notable changes. The project is pre-release (v0.1); nothing has been publish
 - Symlinks inside the scanned tree were followed.
 - A match after blank lines was reported on the wrong line (a `^\s*` regex spanned newlines).
 - `--output-file` for the pretty format left its file handle open.
-- `shlex.quote(cmd)` used inline (`'echo ' + shlex.quote(cmd)`) was still reported as a command injection
-  (MCP05-001); only the assign-first form was recognised. Quoting one value no longer hides another
-  that is raw.
-- The README's worked example now shows what the tool really prints (the auto-detection lines, and
-  the findings in their real order), and `.env.example` is described accurately: a real-looking
-  credential there is reported at LOW, not ignored.
 - **A class named `Server` is not an MCP server.** MCP server detection went by constructor name, so a
   threat-modelling library that instantiates its own `Server` class was reported as 138 "multiple MCP
   servers" and auto-detection picked the MCP list for it. Detection now follows where the name was
