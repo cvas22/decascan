@@ -10,7 +10,7 @@ from ..core.standards import STANDARDS
 
 def to_dict(result: ScanResult, version: str = "0.1.0") -> dict:
     return {
-        "tool": "mcp-sift",
+        "tool": "decascan",
         "version": version,
         "standards": {sid: STANDARDS[sid].version for sid in result.standards},
         "standards_detected": result.detected,

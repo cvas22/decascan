@@ -20,7 +20,15 @@ log = get_logger("scanner")
 
 SLOW_RULE_SECONDS = 2.0
 
-SUPPRESSION_MARKERS = ("mcp-sift:ignore", "mcp-sift: ignore", "nosec mcp-sift")
+SUPPRESSION_MARKERS = (
+    "decascan:ignore",
+    "decascan: ignore",
+    "nosec decascan",
+    # the tool was called mcp-sift before it was renamed; markers already in code keep working
+    "mcp-sift:ignore",
+    "mcp-sift: ignore",
+    "nosec mcp-sift",
+)
 
 
 @dataclass

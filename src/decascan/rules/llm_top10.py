@@ -2,7 +2,7 @@
 
 Three categories are not here on purpose: LLM04 (data and model poisoning), LLM08 (vector and
 embedding weaknesses) and LLM09 (misinformation) are properties of training data, retrieval
-corpora and model behaviour, not of a line of source. `mcp-sift standards` reports them as
+corpora and model behaviour, not of a line of source. `decascan standards` reports them as
 "not statically detectable" instead of letting a clean scan imply they were checked.
 """
 

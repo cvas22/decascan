@@ -1,4 +1,4 @@
-"""`mcp-sift` command line."""
+"""`decascan` command line."""
 
 from __future__ import annotations
 
@@ -28,25 +28,25 @@ EXIT_ERROR = 2
 
 
 @click.group(context_settings={"help_option_names": ["-h", "--help"]})
-@click.version_option(__version__, prog_name="mcp-sift")
+@click.version_option(__version__, prog_name="decascan")
 @click.option(
     "-v",
     "--verbose",
     count=True,
-    envvar="MCP_SIFT_VERBOSE",
+    envvar=["DECASCAN_VERBOSE", "MCP_SIFT_VERBOSE"],  # the second is the pre-rename name
     help="Log diagnostics to stderr: -v for progress, -vv for per-rule timings and skipped files.",
 )
 @click.option(
     "--log-file",
     type=click.Path(path_type=Path),
-    envvar="MCP_SIFT_LOG_FILE",
+    envvar=["DECASCAN_LOG_FILE", "MCP_SIFT_LOG_FILE"],  # the second is the pre-rename name
     help="Write the log to this file instead of stderr (implies -v when no -v is given).",
 )
 @click.option(
     "--log-format",
     type=click.Choice(list(logging_setup.FORMATS)),
     default="text",
-    envvar="MCP_SIFT_LOG_FORMAT",
+    envvar=["DECASCAN_LOG_FORMAT", "MCP_SIFT_LOG_FORMAT"],  # the second is the pre-rename name
     show_default=True,
     help="`json` writes one JSON object per line. The report itself is unaffected.",
 )
@@ -122,7 +122,7 @@ def _resolve_standards(chosen: tuple[str, ...]) -> frozenset[str] | None:
 @click.option(
     "--repo-root",
     type=click.Path(exists=True, file_okay=False, path_type=Path),
-    envvar="MCP_SIFT_REPO_ROOT",
+    envvar=["DECASCAN_REPO_ROOT", "MCP_SIFT_REPO_ROOT"],  # the second is the pre-rename name
     help=(
         "Repository root, so SARIF and annotations carry repo-relative paths when PATH is a "
         "subdirectory. [default: $GITHUB_WORKSPACE, else the nearest .git]"
@@ -249,7 +249,7 @@ def _emit(result, output: str, output_file: Path | None) -> None:
 def rules_command(standard: str | None) -> None:
     """List the built-in rules and the OWASP risks they map to."""
     console = Console()
-    console.print(f"\n[bold]mcp-sift {__version__}[/bold]\n")
+    console.print(f"\n[bold]decascan {__version__}[/bold]\n")
 
     current = None
     for rule in all_rules():
@@ -285,7 +285,7 @@ def rules_command(standard: str | None) -> None:
     type=click.Path(path_type=Path),
     help=(
         "Write the snapshot: a directory gets index.json plus one file per list (used to refresh "
-        "src/mcp_sift/data/top10/); a path ending in .json gets one combined file."
+        "src/decascan/data/top10/); a path ending in .json gets one combined file."
     ),
 )
 def standards_command(as_json: bool, cached: bool, only: str | None, export_path: Path | None) -> None:

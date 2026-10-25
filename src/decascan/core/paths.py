@@ -3,7 +3,7 @@
 Findings carry paths relative to the directory that was scanned, which is what a person at a
 terminal expects. Tools that map findings onto a repository -- GitHub code scanning and PR
 annotations -- need paths relative to the *repository root*. Scanning `src` of a repo and reporting
-`mcp_sift/cli.py` makes GitHub look for a file that does not exist, so SARIF and annotation output
+`decascan/cli.py` makes GitHub look for a file that does not exist, so SARIF and annotation output
 prepend the scan directory's position inside the repository.
 """
 

@@ -8,10 +8,10 @@ import os
 import pytest
 from click.testing import CliRunner
 
-import mcp_sift.cli as cli
-from mcp_sift.cli import main
-from mcp_sift.core.config import ScanConfig
-from mcp_sift.core.scanner import scan
+import decascan.cli as cli
+from decascan.cli import main
+from decascan.core.config import ScanConfig
+from decascan.core.scanner import scan
 
 WEB = ScanConfig(standards=frozenset({"web"}), merge_duplicates=False)
 
@@ -38,7 +38,7 @@ def test_pathological_python_is_reported_and_the_rest_still_scans(tmp_path):
 
 
 def test_a_failing_parser_is_recorded_and_logged(tmp_path, monkeypatch):
-    import mcp_sift.core.context as context
+    import decascan.core.context as context
 
     def boom(*_args):
         raise RuntimeError("parser exploded")
@@ -132,8 +132,8 @@ def test_symlinks_are_counted_in_the_log(tmp_path, caplog):
     root.mkdir()
     (root / "ok.py").write_text("x = 1\n", encoding="utf-8")
     symlink_or_skip(root / "link", root, directory=True)
-    logging.getLogger("mcp_sift").propagate = True
-    with caplog.at_level(logging.INFO, logger="mcp_sift"):
+    logging.getLogger("decascan").propagate = True
+    with caplog.at_level(logging.INFO, logger="decascan"):
         scan(root, WEB)
     built = next(r for r in caplog.records if r.getMessage() == "context built")
     assert built.skipped_symlink == 1
@@ -181,7 +181,7 @@ def test_pretty_output_file_is_closed_and_complete(tmp_path):
 
 
 def test_minified_check_is_computed_once_per_file(tmp_path):
-    from mcp_sift.core.context import build_context
+    from decascan.core.context import build_context
 
     (tmp_path / "a.py").write_text("x = 1\n" + "y" * 100 + "\n", encoding="utf-8")
     ctx = build_context(tmp_path, ScanConfig())

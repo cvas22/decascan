@@ -6,9 +6,9 @@ import time
 
 import pytest
 
-from mcp_sift.core.config import ScanConfig
-from mcp_sift.core.lines import line_of, line_starts, line_text
-from mcp_sift.core.scanner import scan
+from decascan.core.config import ScanConfig
+from decascan.core.lines import line_of, line_starts, line_text
+from decascan.core.scanner import scan
 
 # Generous bounds: these cases ran in well under 2 seconds when written, but before the fixes they
 # ran for minutes, so a loose limit still catches a regression to quadratic behaviour.

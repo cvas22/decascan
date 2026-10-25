@@ -9,10 +9,10 @@ from pathlib import Path
 import pytest
 from click.testing import CliRunner
 
-from mcp_sift.cli import main
-from mcp_sift.core import log as logging_setup
-from mcp_sift.core.config import ScanConfig
-from mcp_sift.core.scanner import scan
+from decascan.cli import main
+from decascan.core import log as logging_setup
+from decascan.core.config import ScanConfig
+from decascan.core.scanner import scan
 
 FIXTURES = Path(__file__).parent / "fixtures"
 VULNERABLE = str(FIXTURES / "vulnerable_webllm")
@@ -66,7 +66,7 @@ def test_json_log_format_is_one_object_per_line(tmp_path):
     records = [json.loads(line) for line in log_file.read_text(encoding="utf-8").splitlines()]
     assert records and all({"ts", "level", "logger", "msg"} <= set(r) for r in records)
     finished = next(r for r in records if r["msg"] == "scan finished")
-    assert finished["findings"] > 0 and finished["errors"] == 0 and finished["logger"] == "mcp_sift.scanner"
+    assert finished["findings"] > 0 and finished["errors"] == 0 and finished["logger"] == "decascan.scanner"
     assert "Auto-detected" not in log_file.read_text(encoding="utf-8")  # the report is not in the log
 
 
@@ -84,7 +84,7 @@ def test_log_format_alone_turns_logging_on():
 
 def test_environment_variables_configure_logging(tmp_path):
     log_file = tmp_path / "env.log"
-    env = {"MCP_SIFT_LOG_FILE": str(log_file), "MCP_SIFT_LOG_FORMAT": "json", "MCP_SIFT_VERBOSE": "2"}
+    env = {"DECASCAN_LOG_FILE": str(log_file), "DECASCAN_LOG_FORMAT": "json", "DECASCAN_VERBOSE": "2"}
     CliRunner().invoke(main, ["scan", VULNERABLE, "--no-fail"], env=env)
     assert "rule finished" in log_file.read_text(encoding="utf-8")
 
@@ -94,8 +94,8 @@ def test_unknown_log_format_is_rejected():
 
 
 def test_rule_failures_are_logged_with_the_rule_id(monkeypatch, tmp_path, caplog):
-    import mcp_sift.rules as rules_pkg
-    from mcp_sift.rules import base
+    import decascan.rules as rules_pkg
+    from decascan.rules import base
 
     def boom(ctx):
         raise RuntimeError("kaput")
@@ -103,9 +103,9 @@ def test_rule_failures_are_logged_with_the_rule_id(monkeypatch, tmp_path, caplog
     broken = base.Rule("WEB05-999", "WEB05", "x", "x", boom)
     monkeypatch.setattr(rules_pkg, "REGISTRY", [*rules_pkg.REGISTRY, broken])
     (tmp_path / "a.py").write_text("x = 1\n", encoding="utf-8")
-    logger = logging.getLogger("mcp_sift")
+    logger = logging.getLogger("decascan")
     logger.propagate = True  # caplog listens on the root logger
-    with caplog.at_level(logging.WARNING, logger="mcp_sift"):
+    with caplog.at_level(logging.WARNING, logger="decascan"):
         result = scan(tmp_path, ScanConfig())
     assert any("WEB05-999" in e for e in result.errors)
     record = next(r for r in caplog.records if r.getMessage() == "rule failed")
@@ -114,8 +114,8 @@ def test_rule_failures_are_logged_with_the_rule_id(monkeypatch, tmp_path, caplog
 
 def test_unparseable_files_are_logged(tmp_path, caplog):
     (tmp_path / "bad.py").write_text("def (:\n", encoding="utf-8")
-    logging.getLogger("mcp_sift").propagate = True
-    with caplog.at_level(logging.WARNING, logger="mcp_sift"):
+    logging.getLogger("decascan").propagate = True
+    with caplog.at_level(logging.WARNING, logger="decascan"):
         scan(tmp_path, ScanConfig())
     assert any(r.getMessage() == "file could not be parsed" and r.file == "bad.py" for r in caplog.records)
 
@@ -124,8 +124,8 @@ def test_skipped_files_are_counted_and_listed_at_debug(tmp_path, caplog):
     (tmp_path / "big.py").write_text("x = 1\n" * 10, encoding="utf-8")
     (tmp_path / "node_modules").mkdir()
     (tmp_path / "node_modules" / "dep.js").write_text("x\n", encoding="utf-8")
-    logging.getLogger("mcp_sift").propagate = True
-    with caplog.at_level(logging.DEBUG, logger="mcp_sift"):
+    logging.getLogger("decascan").propagate = True
+    with caplog.at_level(logging.DEBUG, logger="decascan"):
         scan(tmp_path, ScanConfig(max_file_bytes=5))
     built = next(r for r in caplog.records if r.getMessage() == "context built")
     assert built.skipped_too_large == 1 and built.skipped_excluded == 1
@@ -133,9 +133,9 @@ def test_skipped_files_are_counted_and_listed_at_debug(tmp_path, caplog):
 
 
 def test_suppressed_findings_are_logged_at_debug(tmp_path, caplog):
-    (tmp_path / "a.py").write_text("DEBUG = True  # mcp-sift:ignore\n", encoding="utf-8")
-    logging.getLogger("mcp_sift").propagate = True
-    with caplog.at_level(logging.DEBUG, logger="mcp_sift"):
+    (tmp_path / "a.py").write_text("DEBUG = True  # decascan:ignore\n", encoding="utf-8")
+    logging.getLogger("decascan").propagate = True
+    with caplog.at_level(logging.DEBUG, logger="decascan"):
         scan(tmp_path, ScanConfig(standards=frozenset({"web"})))
     suppressed = [r for r in caplog.records if r.getMessage() == "finding suppressed inline"]
     assert [r.rule for r in suppressed] == ["WEB05-001"]
@@ -150,7 +150,7 @@ def test_library_default_is_silent(tmp_path, capsys):
 
 
 def test_configure_is_idempotent_and_replaces_handlers(tmp_path):
-    logger = logging.getLogger("mcp_sift")
+    logger = logging.getLogger("decascan")
     logging_setup.configure(1, None, "text")
     logging_setup.configure(2, tmp_path / "x.log", "json")
     assert len(logger.handlers) == 1 and isinstance(logger.handlers[0], logging.FileHandler)
@@ -171,7 +171,7 @@ def test_verbosity_maps_to_levels(verbosity, level):
 
 
 def test_text_formatter_appends_fields_as_key_value():
-    record = logging.LogRecord("mcp_sift.x", logging.INFO, __file__, 1, "hello", None, None)
+    record = logging.LogRecord("decascan.x", logging.INFO, __file__, 1, "hello", None, None)
     record.files = 3
     line = logging_setup.TextFormatter().format(record)
     assert "INFO" in line and "hello" in line and line.endswith("files=3")
@@ -183,6 +183,6 @@ def test_json_formatter_includes_exception_text():
     except ValueError:
         import sys
 
-        record = logging.LogRecord("mcp_sift.x", logging.ERROR, __file__, 1, "oops", None, sys.exc_info())
+        record = logging.LogRecord("decascan.x", logging.ERROR, __file__, 1, "oops", None, sys.exc_info())
     payload = json.loads(logging_setup.JsonFormatter().format(record))
     assert payload["level"] == "error" and "ValueError: bad" in payload["exc"]

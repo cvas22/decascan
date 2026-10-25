@@ -105,7 +105,7 @@ def render(result: ScanResult, console: Console | None = None, show_info: bool =
                     ),
                     style="green",
                 ),
-                title="mcp-sift",
+                title="decascan",
                 border_style="green",
             )
         )
