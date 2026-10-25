@@ -10,6 +10,11 @@ permissions: {}
 
 jobs:
   welcome:
+    # Only for outside contributors: the owner, members, collaborators and bots do not need the greeting.
+    if: >-
+      github.actor != 'dependabot[bot]' &&
+      !contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'),
+        github.event.pull_request.author_association || github.event.issue.author_association)
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
