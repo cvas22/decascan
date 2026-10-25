@@ -12,6 +12,8 @@ from .context import ScanContext, build_context
 from .detect import detect_standards
 from .findings import Finding, Severity
 from .log import get_logger
+from .merge import merge_cross_list
+from .paths import path_prefix, repo_path, resolve_repo_root
 from .standards import STANDARDS
 
 log = get_logger("scanner")
@@ -29,6 +31,12 @@ class ScanResult:
     standards: tuple[str, ...] = ()
     # Why each list was selected when `standards` was auto-detected; empty for an explicit choice.
     detected: dict[str, list[str]] = field(default_factory=dict)
+    # The scanned directory's position inside its repository ("" when it is the root, or unknown).
+    # Finding paths stay relative to the scanned directory; SARIF and annotations add this prefix.
+    path_prefix: str = ""
+
+    def repo_path(self, finding: Finding) -> str:
+        return repo_path(self.path_prefix, finding.file_path)
 
     def counts_by_severity(self) -> dict[str, int]:
         counts = {s.value: 0 for s in Severity}
@@ -126,6 +134,12 @@ def scan(root: Path, config: ScanConfig | None = None) -> ScanResult:
         seen.add(key)
         kept.append(finding)
 
+    if config.merge_duplicates:
+        before = len(kept)
+        kept = merge_cross_list(kept)
+        if len(kept) != before:
+            log.info("cross-list duplicates merged", extra={"merged": before - len(kept)})
+
     kept.sort(key=lambda f: f.sort_key)
     duration = time.perf_counter() - started
     log.info(
@@ -147,4 +161,5 @@ def scan(root: Path, config: ScanConfig | None = None) -> ScanResult:
         errors=errors,
         standards=tuple(sorted(active)),
         detected=detected,
+        path_prefix=path_prefix(ctx.root, resolve_repo_root(ctx.root, config.repo_root)),
     )

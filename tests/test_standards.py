@@ -20,6 +20,7 @@ CLEAN = FIXTURES / "clean_webllm"
 
 
 def rule_ids(path: Path, **config) -> set[str]:
+    config.setdefault("merge_duplicates", False)  # which rules fire, not how duplicates are merged
     result = scan(path, ScanConfig(**config))
     assert result.errors == []
     return {f.rule_id for f in result.findings}

@@ -91,7 +91,8 @@ def test_cli_github_format_end_to_end():
     out = CliRunner().invoke(
         main, ["scan", str(FIXTURES / "vulnerable_webllm"), "-o", "github", "--no-fail"]
     ).output
-    assert out.startswith("::error file=app.py,line=")
+    # Repo-relative: the fixture lives under tests/fixtures inside the repository.
+    assert out.startswith("::error file=tests/fixtures/vulnerable_webllm/app.py,line=")
     assert "title=WEB03-001 " in out
 
 

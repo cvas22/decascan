@@ -137,6 +137,9 @@ def _print_finding(finding: Finding, writer: _Writer) -> None:
         writer.line(f"  {writer.bar} {finding.snippet}", style="dim")
 
     writer.line(f"  {finding.description}")
+    also = finding.metadata.get("also_maps_to")
+    if also:
+        writer.line(f"  Also maps to: {also}", style="dim")
     writer.pair("  Fix: ", "bold green", finding.remediation)
 
     meta = []

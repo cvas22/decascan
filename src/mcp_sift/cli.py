@@ -118,6 +118,20 @@ def _resolve_standards(chosen: tuple[str, ...]) -> frozenset[str] | None:
     multiple=True,
     help="Extra directory names to skip, on top of the defaults (node_modules, .venv, ...).",
 )
+@click.option(
+    "--repo-root",
+    type=click.Path(exists=True, file_okay=False, path_type=Path),
+    envvar="MCP_SIFT_REPO_ROOT",
+    help=(
+        "Repository root, so SARIF and annotations carry repo-relative paths when PATH is a "
+        "subdirectory. [default: $GITHUB_WORKSPACE, else the nearest .git]"
+    ),
+)
+@click.option(
+    "--keep-duplicates",
+    is_flag=True,
+    help="Report a defect once per Top 10 list instead of merging it into one finding.",
+)
 @click.option("--no-fail", is_flag=True, help="Always exit 0, whatever is found.")
 def scan_command(
     path: Path,
@@ -129,6 +143,8 @@ def scan_command(
     rules: tuple[str, ...],
     disabled: tuple[str, ...],
     excludes: tuple[str, ...],
+    repo_root: Path | None,
+    keep_duplicates: bool,
     no_fail: bool,
 ) -> None:
     """Scan a directory (or a single file)."""
@@ -136,6 +152,8 @@ def scan_command(
         fail_on=Severity.parse(fail_on),
         min_severity=Severity.parse(min_severity),
         standards=_resolve_standards(standards),
+        repo_root=repo_root,
+        merge_duplicates=not keep_duplicates,
         enabled_rules=frozenset(rules) if rules else None,
         disabled_rules=frozenset(disabled),
     )

@@ -203,6 +203,8 @@ $ mcp-sift scan PATH [options]
 | `--rule ID` | all | Run only these rule ids. Repeatable. |
 | `--disable ID` | none | Skip these rule ids. Repeatable. |
 | `--exclude DIR` | see below | Extra directory names to skip, on top of the defaults. Repeatable. |
+| `--repo-root DIR` | auto | Repository root, so SARIF and annotations carry repo-relative paths when `PATH` is a subdirectory. Defaults to `$GITHUB_WORKSPACE`, else the nearest `.git`. |
+| `--keep-duplicates` | off | Report a defect once per Top 10 list instead of merging it into one finding that lists the others under "Also maps to". |
 | `--no-fail` | off | Always exit `0`, whatever is found. |
 
 **Logging.** Off by default, so a plain run prints only the report. Diagnostics always go to stderr

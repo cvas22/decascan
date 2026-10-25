@@ -14,6 +14,8 @@ def to_dict(result: ScanResult, version: str = "0.1.0") -> dict:
         "version": version,
         "standards": {sid: STANDARDS[sid].version for sid in result.standards},
         "standards_detected": result.detected,
+        # Finding paths are relative to the scanned directory; this is where it sits in the repo.
+        "path_prefix": result.path_prefix,
         "owasp_mcp_top10_version": STANDARDS["mcp"].version,
         "summary": {
             "files_scanned": result.files_scanned,
