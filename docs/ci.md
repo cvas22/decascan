@@ -7,7 +7,7 @@ fits any pipeline as a plain command.
 |-----------|---------|
 | `0` | Clean, or nothing at or above `--fail-on` (or `--no-fail` was given) |
 | `1` | A finding at or above `--fail-on` (default `high`) |
-| `2` | Bad invocation: unknown rule, bad option, missing path |
+| `2` | Bad invocation (unknown rule, bad option, missing path) or the scan aborted. A crash never exits `1`, so it cannot be mistaken for findings |
 
 | `-o` | For |
 |------|-----|
@@ -122,6 +122,21 @@ jobs:
       - checkout
       - run: pip install mcp-sift && mcp-sift scan . --fail-on high
 ```
+
+## Paths when you scan a subdirectory
+
+Findings carry paths relative to the directory you scanned. SARIF and `-o github` output add the
+directory's position inside the repository, so `path: services/api` reports
+`services/api/app.py` and GitHub puts the annotation on the right file. The repository root is
+`--repo-root` (or `MCP_SIFT_REPO_ROOT`), else `$GITHUB_WORKSPACE`, else the nearest `.git`. The JSON
+report keeps scan-relative paths and records the offset as `path_prefix`.
+
+## One finding per defect
+
+When a scan covers several lists, one defect is often a risk in more than one of them: shell
+injection is MCP05, WEB03 and, for model output, LLM05. Findings on the same line with the same CWE
+are merged into the strongest one, which lists the others under `also_maps_to` (SARIF:
+`alsoMapsTo`, terminal: "Also maps to"). Pass `--keep-duplicates` to report each list separately.
 
 ## Keeping a log of the run
 

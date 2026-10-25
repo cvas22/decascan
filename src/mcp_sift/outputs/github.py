@@ -25,8 +25,8 @@ def _escape_property(value: str) -> str:
     return _escape_data(value).replace(":", "%3A").replace(",", "%2C")
 
 
-def _annotation(finding: Finding) -> str:
-    props = [f"file={_escape_property(finding.file_path)}"]
+def _annotation(finding: Finding, file_path: str) -> str:
+    props = [f"file={_escape_property(file_path)}"]
     if finding.line:
         props.append(f"line={finding.line}")
     props.append(f"title={_escape_property(f'{finding.rule_id} {finding.title}')}")
@@ -35,7 +35,7 @@ def _annotation(finding: Finding) -> str:
 
 
 def render(result: ScanResult, version: str = "0.1.0") -> str:
-    lines = [_annotation(f) for f in result.findings]
+    lines = [_annotation(f, result.repo_path(f)) for f in result.findings]
     for error in result.errors:
         lines.append(f"::warning title=mcp-sift::{_escape_data(error)}")
     counts = result.counts_by_severity()

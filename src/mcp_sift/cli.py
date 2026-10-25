@@ -118,6 +118,20 @@ def _resolve_standards(chosen: tuple[str, ...]) -> frozenset[str] | None:
     multiple=True,
     help="Extra directory names to skip, on top of the defaults (node_modules, .venv, ...).",
 )
+@click.option(
+    "--repo-root",
+    type=click.Path(exists=True, file_okay=False, path_type=Path),
+    envvar="MCP_SIFT_REPO_ROOT",
+    help=(
+        "Repository root, so SARIF and annotations carry repo-relative paths when PATH is a "
+        "subdirectory. [default: $GITHUB_WORKSPACE, else the nearest .git]"
+    ),
+)
+@click.option(
+    "--keep-duplicates",
+    is_flag=True,
+    help="Report a defect once per Top 10 list instead of merging it into one finding.",
+)
 @click.option("--no-fail", is_flag=True, help="Always exit 0, whatever is found.")
 def scan_command(
     path: Path,
@@ -129,6 +143,8 @@ def scan_command(
     rules: tuple[str, ...],
     disabled: tuple[str, ...],
     excludes: tuple[str, ...],
+    repo_root: Path | None,
+    keep_duplicates: bool,
     no_fail: bool,
 ) -> None:
     """Scan a directory (or a single file)."""
@@ -136,6 +152,8 @@ def scan_command(
         fail_on=Severity.parse(fail_on),
         min_severity=Severity.parse(min_severity),
         standards=_resolve_standards(standards),
+        repo_root=repo_root,
+        merge_duplicates=not keep_duplicates,
         enabled_rules=frozenset(rules) if rules else None,
         disabled_rules=frozenset(disabled),
     )
@@ -146,22 +164,34 @@ def scan_command(
     if unknown:
         raise click.BadParameter(f"unknown rule id(s): {', '.join(sorted(unknown))}")
 
-    result = scan(path, config)
-
-    if output == "pretty":
-        console = Console(file=output_file.open("w", encoding="utf-8") if output_file else None)
-        pretty.render(result, console)
-    else:
-        renderer = {"json": json_out, "sarif": sarif, "github": github}[output]
-        text = renderer.render(result, __version__)
-        if output_file:
-            output_file.write_text(text, encoding="utf-8")
-        else:
-            click.echo(text)
+    try:
+        result = scan(path, config)
+        _emit(result, output, output_file)
+    except (OSError, MemoryError, RecursionError, ValueError, RuntimeError) as exc:
+        # Exit 1 means "findings"; a crash must not be mistaken for it by a pipeline.
+        logging_setup.get_logger("cli").exception("scan aborted")
+        click.echo(f"error: scan aborted: {type(exc).__name__}: {exc}", err=True)
+        sys.exit(EXIT_ERROR)
 
     if no_fail:
         sys.exit(EXIT_OK)
     sys.exit(EXIT_FINDINGS if result.should_fail(config.fail_on) else EXIT_OK)
+
+
+def _emit(result, output: str, output_file: Path | None) -> None:
+    if output == "pretty":
+        if output_file:
+            with output_file.open("w", encoding="utf-8") as handle:
+                pretty.render(result, Console(file=handle))
+        else:
+            pretty.render(result, Console())
+        return
+    renderer = {"json": json_out, "sarif": sarif, "github": github}[output]
+    text = renderer.render(result, __version__)
+    if output_file:
+        output_file.write_text(text, encoding="utf-8")
+    else:
+        click.echo(text)
 
 
 @main.command("rules")

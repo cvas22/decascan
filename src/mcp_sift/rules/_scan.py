@@ -58,19 +58,14 @@ MAX_LINE_CHARS = 5000
 log = get_logger("rules")
 
 
-def _is_minified(text: str) -> bool:
-    return any(len(line) > MAX_LINE_CHARS for line in text.split("\n"))
-
-
 def source_files(ctx: ScanContext) -> Iterator[SourceFile]:
     for rel in ctx.files:
         if not rel.lower().endswith(SOURCE_SUFFIXES) or is_test_path(rel):
             continue
-        text = ctx.text(rel)
-        if _is_minified(text):
+        if ctx.is_minified(rel, MAX_LINE_CHARS):
             log.debug("file skipped by pattern rules: minified or generated", extra={"file": rel})
             continue
-        yield SourceFile(rel, text, not rel.lower().endswith(".py"))
+        yield SourceFile(rel, ctx.text(rel), not rel.lower().endswith(".py"))
 
 
 def is_comment(line: str) -> bool:

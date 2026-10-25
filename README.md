@@ -203,6 +203,8 @@ $ mcp-sift scan PATH [options]
 | `--rule ID` | all | Run only these rule ids. Repeatable. |
 | `--disable ID` | none | Skip these rule ids. Repeatable. |
 | `--exclude DIR` | see below | Extra directory names to skip, on top of the defaults. Repeatable. |
+| `--repo-root DIR` | auto | Repository root, so SARIF and annotations carry repo-relative paths when `PATH` is a subdirectory. Defaults to `$GITHUB_WORKSPACE`, else the nearest `.git`. |
+| `--keep-duplicates` | off | Report a defect once per Top 10 list instead of merging it into one finding that lists the others under "Also maps to". |
 | `--no-fail` | off | Always exit `0`, whatever is found. |
 
 **Logging.** Off by default, so a plain run prints only the report. Diagnostics always go to stderr
@@ -231,7 +233,7 @@ Default excludes (always skipped): `.git`, `node_modules`, `__pycache__`, `.venv
 |------|---------|
 | `0` | Clean, or nothing at/above `--fail-on` (or `--no-fail` was set) |
 | `1` | A finding at or above `--fail-on` is present |
-| `2` | Bad invocation (unknown rule id, missing path, …) |
+| `2` | Bad invocation (unknown rule id, missing path, …) or the scan itself aborted (for example an unwritable `--output-file`). Never `1`, so a crash is not mistaken for findings. |
 
 `mcp-sift rules [-s LIST]` lists every built-in rule and the OWASP risk it maps to.
 `mcp-sift standards` shows each Top 10 list and which of its categories have rules. With `--json` it
@@ -360,6 +362,12 @@ arguments, and a one-hop pass marks names assigned directly from a request value
 missed, and a similarly named variable can trip a rule. Every such finding carries a confidence below
 1.0. Matches inside string literals, comments, imports and test directories (`tests/`, `test_*.py`,
 `*.spec.ts`, ...) are skipped.
+
+**Hostile input is contained.** Symlinks inside the scanned tree are skipped (a link must not make the
+scanner read outside it, or loop), excluded directories such as `node_modules` are never entered, a
+UTF-8 byte-order mark is tolerated in source, manifests and `package.json`, and a parser that fails on
+one file (pathologically nested JSON, a 200,000-term expression) costs that file's facts and is
+reported as a warning, not a crash.
 
 **No dynamic analysis:** the scanner never executes the server it's auditing. Everything is read from
 manifest, config, and source.

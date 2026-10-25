@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import os
+from collections.abc import Callable, Iterator
 from dataclasses import dataclass, field
 from functools import cached_property
 from pathlib import Path
@@ -32,7 +34,11 @@ class ScanContext:
     dependencies: list[Dependency] = field(default_factory=list)
     install_scripts: list[InstallScript] = field(default_factory=list)
     lockfiles: list[str] = field(default_factory=list)
+    # Per-file failures (a parser crashed on a hostile or odd file). The scan carries on without that
+    # file's facts and reports these as warnings.
+    errors: list[str] = field(default_factory=list)
     _text_cache: dict[str, str] = field(default_factory=dict, repr=False)
+    _minified_cache: dict[str, bool] = field(default_factory=dict, repr=False)
 
     @property
     def has_lockfile(self) -> bool:
@@ -52,12 +58,22 @@ class ScanContext:
     def text(self, rel_path: str) -> str:
         if rel_path not in self._text_cache:
             try:
+                # utf-8-sig: a byte-order mark (common from Windows editors) would otherwise reach the
+                # Python parser as a stray character and the file would not be scanned at all.
                 self._text_cache[rel_path] = (self.root / rel_path).read_text(
-                    encoding="utf-8", errors="replace"
+                    encoding="utf-8-sig", errors="replace"
                 )
             except OSError:
                 self._text_cache[rel_path] = ""
         return self._text_cache[rel_path]
+
+    def is_minified(self, rel_path: str, max_line_chars: int) -> bool:
+        """Whether any line is longer than `max_line_chars` (cached: every rule asks per file)."""
+        if rel_path not in self._minified_cache:
+            self._minified_cache[rel_path] = any(
+                len(line) > max_line_chars for line in self.text(rel_path).split("\n")
+            )
+        return self._minified_cache[rel_path]
 
     def line(self, rel_path: str, line_no: int) -> str:
         return line_text(self.text(rel_path), line_no)
@@ -96,26 +112,58 @@ class ScanContext:
         return None
 
 
-def _is_excluded(path: Path, root: Path, excludes: tuple[str, ...]) -> bool:
-    return any(part in excludes for part in path.relative_to(root).parts)
+def _walk(root: Path, excludes: tuple[str, ...], counts: dict[str, int]) -> Iterator[Path]:
+    """Files under `root`, without entering excluded directories or following symlinks.
+
+    Excluded directories are pruned before they are entered, so `node_modules` and virtualenvs cost
+    nothing. Symlinks are skipped entirely: a link inside the scanned tree must not make the scanner
+    read a file outside it (or loop forever through a link to a parent directory).
+    """
+    for current, dirnames, filenames in os.walk(root, followlinks=False):
+        kept = []
+        for name in sorted(dirnames):
+            full = Path(current) / name
+            if name in excludes:
+                counts["excluded"] += 1
+            elif full.is_symlink():
+                counts["symlink"] += 1
+                log.debug("symlinked directory skipped", extra={"file": str(full)})
+            else:
+                kept.append(name)
+        dirnames[:] = kept
+        for name in sorted(filenames):
+            full = Path(current) / name
+            if full.is_symlink():
+                counts["symlink"] += 1
+                log.debug("symlinked file skipped", extra={"file": str(full)})
+            else:
+                yield full
+
+
+def _guarded(ctx: ScanContext, rel: str, what: str, fn: Callable, *args):
+    """Run one parser on one file; a crash costs that file's facts, never the whole scan."""
+    try:
+        return fn(*args)
+    except Exception as exc:  # hostile input can raise RecursionError, MemoryError-adjacent errors, ...
+        message = f"{rel}: {what} failed ({type(exc).__name__}: {str(exc)[:80]})"
+        ctx.errors.append(message)
+        log.warning("parser failed", extra={"file": rel, "parser": what, "error": type(exc).__name__})
+        return None
 
 
 def build_context(root: Path, config: ScanConfig) -> ScanContext:
     root = root.resolve()
     ctx = ScanContext(root=root, config=config)
 
+    counts = {"excluded": 0, "too_large": 0, "unreadable": 0, "not_scannable": 0, "symlink": 0}
     if root.is_file():
-        candidates = [root]
+        candidates: Iterator[Path] = iter([root])
         root = root.parent
         ctx.root = root
     else:
-        candidates = [p for p in root.rglob("*") if p.is_file()]
+        candidates = _walk(root, config.excludes, counts)
 
-    counts = {"excluded": 0, "too_large": 0, "unreadable": 0, "not_scannable": 0}
-    for path in sorted(candidates):
-        if _is_excluded(path, root, config.excludes):
-            counts["excluded"] += 1
-            continue
+    for path in candidates:
         try:
             if path.stat().st_size > config.max_file_bytes:
                 counts["too_large"] += 1
@@ -151,19 +199,24 @@ def build_context(root: Path, config: ScanConfig) -> ScanContext:
             ctx.lockfiles.append(rel)
 
         if is_dependency_file(name):
-            deps, scripts = load_dependencies(path, rel)
-            ctx.dependencies.extend(deps)
-            ctx.install_scripts.extend(scripts)
+            parsed = _guarded(ctx, rel, "dependency parser", load_dependencies, path, rel)
+            if parsed:
+                ctx.dependencies.extend(parsed[0])
+                ctx.install_scripts.extend(parsed[1])
 
         if is_manifest_name(name):
-            manifest = load_manifest(path, root)
+            manifest = _guarded(ctx, rel, "manifest parser", load_manifest, path, root)
             if manifest:
                 ctx.manifests.append(manifest)
 
         if suffix == ".py":
-            ctx.source_facts[rel] = parse_python(rel, ctx.text(rel))
+            facts = _guarded(ctx, rel, "python parser", parse_python, rel, ctx.text(rel))
+            if facts:
+                ctx.source_facts[rel] = facts
         elif suffix in (".ts", ".tsx", ".js", ".jsx", ".mjs", ".mts", ".cjs"):
-            ctx.source_facts[rel] = parse_javascript(rel, ctx.text(rel))
+            facts = _guarded(ctx, rel, "javascript parser", parse_javascript, rel, ctx.text(rel))
+            if facts:
+                ctx.source_facts[rel] = facts
 
     log.info(
         "context built",

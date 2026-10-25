@@ -70,7 +70,7 @@ def to_sarif(result: ScanResult, version: str = "0.1.0") -> dict:
     for finding in result.findings:
         location: dict = {
             "physicalLocation": {
-                "artifactLocation": {"uri": finding.file_path, "uriBaseId": "%SRCROOT%"},
+                "artifactLocation": {"uri": result.repo_path(finding), "uriBaseId": "%SRCROOT%"},
             }
         }
         if finding.line:
@@ -92,6 +92,7 @@ def to_sarif(result: ScanResult, version: str = "0.1.0") -> dict:
                     "security-severity": _SECURITY_SEVERITY[finding.severity],
                     "mcpId": finding.mcp_id,
                     "standard": finding.standard,
+                    "alsoMapsTo": finding.metadata.get("also_maps_to"),
                     "owaspRisk": finding.risk_name,
                     "confidence": finding.confidence,
                     "cwe": finding.cwe_id,

@@ -8,7 +8,8 @@ from mcp_sift.core.config import ScanConfig
 from mcp_sift.core.findings import Severity
 from mcp_sift.core.scanner import scan
 
-ALL_LISTS = ScanConfig(standards=frozenset({"llm", "web"}))
+# Rules are tested one at a time, so cross-list merging (tested separately) is off.
+ALL_LISTS = ScanConfig(standards=frozenset({"llm", "web"}), merge_duplicates=False)
 
 
 def findings(tmp_path, source, name="app.py", rule=None):
