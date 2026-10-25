@@ -4,15 +4,16 @@ from __future__ import annotations
 
 import json
 
-from ..core.findings import OWASP_MCP_TOP10_VERSION
 from ..core.scanner import ScanResult
+from ..core.standards import STANDARDS
 
 
 def to_dict(result: ScanResult, version: str = "0.1.0") -> dict:
     return {
         "tool": "mcp-sift",
         "version": version,
-        "owasp_mcp_top10_version": OWASP_MCP_TOP10_VERSION,
+        "standards": {sid: STANDARDS[sid].version for sid in result.standards},
+        "owasp_mcp_top10_version": STANDARDS["mcp"].version,
         "summary": {
             "files_scanned": result.files_scanned,
             "rules_run": result.rules_run,

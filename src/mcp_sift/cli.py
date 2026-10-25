@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import sys
 from pathlib import Path
 
@@ -9,9 +10,11 @@ import click
 from rich.console import Console
 
 from . import __version__
+from .catalog import build_catalog, export_catalog, load_cached_catalog
 from .core.config import ScanConfig
-from .core.findings import MCP_RISKS, OWASP_MCP_TOP10_VERSION, Severity
+from .core.findings import Severity
 from .core.scanner import scan
+from .core.standards import RISK_NAMES, STANDARDS
 from .outputs import json_out, pretty, sarif
 from .rules import all_rules
 
@@ -25,7 +28,7 @@ EXIT_ERROR = 2
 @click.group(context_settings={"help_option_names": ["-h", "--help"]})
 @click.version_option(__version__, prog_name="mcp-sift")
 def main() -> None:
-    """Audit an MCP server against the OWASP MCP Top 10."""
+    """Scan source against the OWASP Top 10 lists: MCP, LLM applications and web."""
 
 
 @main.command("scan")
@@ -55,6 +58,14 @@ def main() -> None:
     default="info",
     help="Drop findings below this severity entirely.",
 )
+@click.option(
+    "--standard",
+    "-s",
+    "standards",
+    multiple=True,
+    type=click.Choice(sorted(STANDARDS)),
+    help="Top 10 list(s) to scan against (repeatable). [default: all]",
+)
 @click.option("--rule", "rules", multiple=True, help="Run only these rule ids (repeatable).")
 @click.option("--disable", "disabled", multiple=True, help="Skip these rule ids (repeatable).")
 @click.option(
@@ -70,15 +81,17 @@ def scan_command(
     output_file: Path | None,
     fail_on: str,
     min_severity: str,
+    standards: tuple[str, ...],
     rules: tuple[str, ...],
     disabled: tuple[str, ...],
     excludes: tuple[str, ...],
     no_fail: bool,
 ) -> None:
-    """Scan an MCP server directory (or a single file)."""
+    """Scan a directory (or a single file)."""
     config = ScanConfig(
         fail_on=Severity.parse(fail_on),
         min_severity=Severity.parse(min_severity),
+        standards=frozenset(standards) if standards else None,
         enabled_rules=frozenset(rules) if rules else None,
         disabled_rules=frozenset(disabled),
     )
@@ -108,18 +121,61 @@ def scan_command(
 
 
 @main.command("rules")
-def rules_command() -> None:
+@click.option("--standard", "-s", "standard", type=click.Choice(sorted(STANDARDS)), help="Only this list.")
+def rules_command(standard: str | None) -> None:
     """List the built-in rules and the OWASP risks they map to."""
     console = Console()
-    console.print(f"\n[bold]mcp-sift {__version__}[/bold] — OWASP MCP Top 10 v{OWASP_MCP_TOP10_VERSION}\n")
+    console.print(f"\n[bold]mcp-sift {__version__}[/bold]\n")
 
     current = None
     for rule in all_rules():
+        if standard and rule.standard != standard:
+            continue
         if rule.mcp_id != current:
             current = rule.mcp_id
-            console.print(f"[bold]{rule.mcp_id}[/bold] [dim]{MCP_RISKS[rule.mcp_id]}[/dim]")
+            console.print(
+                f"[bold]{rule.mcp_id}[/bold] [dim]{RISK_NAMES[rule.mcp_id]}[/dim]"
+            )
         console.print(f"  [cyan]{rule.id}[/cyan]  {rule.name}")
         console.print(f"          [dim]{rule.description}[/dim]")
+    console.print()
+
+
+@main.command("standards")
+@click.option("--json", "as_json", is_flag=True, help="Print the catalog as JSON instead of a table.")
+@click.option(
+    "--cached",
+    is_flag=True,
+    help="With --json: print the snapshot shipped in the package rather than rebuilding it.",
+)
+@click.option(
+    "--export",
+    "export_path",
+    type=click.Path(path_type=Path),
+    help="Write the catalog snapshot to this file (used to refresh data/top10.json).",
+)
+def standards_command(as_json: bool, cached: bool, export_path: Path | None) -> None:
+    """Show each Top 10 list and which of its categories have rules."""
+    if export_path:
+        export_catalog(export_path)
+        click.echo(f"wrote {export_path}")
+        return
+    if as_json:
+        click.echo(json.dumps(load_cached_catalog() if cached else build_catalog(), indent=2))
+        return
+
+    console = Console()
+    catalog = build_catalog()
+    for standard in STANDARDS.values():
+        console.print(f"\n[bold]{standard.name}[/bold] [dim]({standard.id}, {standard.version})[/dim]")
+        for risk in catalog["standards"][standard.id]["risks"]:
+            if risk["status"] == "covered":
+                status = f"[green]{len(risk['rules'])} rule(s)[/green]"
+            elif risk["status"] == "not-static":
+                status = "[dim]not static[/dim]"
+            else:
+                status = "[yellow]no rules yet[/yellow]"
+            console.print(f"  {risk['id']:<7} {risk['name']:<50} {status}")
     console.print()
 
 

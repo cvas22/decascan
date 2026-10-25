@@ -1,6 +1,7 @@
 # Rules
 
-Every rule maps to a risk in the OWASP MCP Top 10 (v0.1) and carries a CWE id and a confidence
+The first part covers the OWASP MCP Top 10 (v0.1); the LLM Applications and web Top 10 rules follow.
+Every rule maps to a risk in one of the lists and carries a CWE id and a confidence
 score. Confidence below 1.0 means the rule matches a *pattern* that is usually a vulnerability, not
 a proof of one — read the finding before you act on it.
 
@@ -286,3 +287,153 @@ primary server received.
 
 Code binds a port that appears in no manifest. An operator reading the manifest does not know the
 listener exists, so it will not be firewalled, monitored, or reviewed.
+
+---
+
+# OWASP Top 10 for LLM Applications (2025)
+
+Pattern-based rules (regex plus a one-hop request-taint pass). Severity, CWE and a fix are printed with every finding; confidence is below 1.0 throughout. Test directories are skipped.
+
+## LLM01 — Prompt Injection
+
+### LLM01-001 — Variable data interpolated into the system prompt
+A system message is built with an f-string, .format() or concatenation.
+
+## LLM02 — Sensitive Information Disclosure
+
+### LLM02-001 — Secret interpolated into a prompt
+An environment variable, key or password is formatted into text sent to the model.
+
+## LLM03 — Supply Chain
+
+### LLM03-001 — Model or dataset code executed from a remote repository
+`trust_remote_code=True` runs Python shipped inside the model repository.
+
+### LLM03-002 — Model weights loaded through pickle
+`torch.load` / `joblib.load` without `weights_only=True` can execute code.
+
+### LLM03-003 — Model downloaded without a pinned revision
+`from_pretrained` / `hf_hub_download` with no `revision=` follows a moving branch.
+
+## LLM04 — Data and Model Poisoning
+
+Not statically detectable: this is a property of data, design or model behaviour, not of a line of source. No rule is claimed for it.
+
+## LLM05 — Improper Output Handling
+
+### LLM05-001 — Model output reaches a dangerous sink unvalidated
+LLM output is passed to eval/exec, a shell, raw HTML or a SQL string.
+
+## LLM06 — Excessive Agency
+
+### LLM06-001 — Agent granted unrestricted code, shell or file capability
+An agent is wired to a shell/REPL tool or an `allow_dangerous_*` switch.
+
+## LLM07 — System Prompt Leakage
+
+### LLM07-001 — Credential embedded in a system prompt
+A system prompt contains a key, password or token value.
+
+## LLM08 — Vector and Embedding Weaknesses
+
+Not statically detectable: this is a property of data, design or model behaviour, not of a line of source. No rule is claimed for it.
+
+## LLM09 — Misinformation
+
+Not statically detectable: this is a property of data, design or model behaviour, not of a line of source. No rule is claimed for it.
+
+## LLM10 — Unbounded Consumption
+
+### LLM10-001 — Model call with no output-token cap
+A completion request sets no `max_tokens` (or equivalent) limit.
+
+---
+
+# OWASP Top 10 (Web Application Security Risks) (2021)
+
+Pattern-based rules (regex plus a one-hop request-taint pass). Severity, CWE and a fix are printed with every finding; confidence is below 1.0 throughout. Test directories are skipped.
+
+## WEB01 — A01 Broken Access Control
+
+### WEB01-001 — Request-derived value used as a file path
+A request parameter reaches a file open/send call (path traversal).
+
+### WEB01-002 — CORS allows every origin together with credentials
+A wildcard origin is combined with credentialed requests.
+
+### WEB01-003 — CSRF protection disabled
+A view or the whole app opts out of CSRF checks.
+
+## WEB02 — A02 Cryptographic Failures
+
+### WEB02-001 — Broken hash algorithm (MD5 / SHA-1)
+MD5 or SHA-1 is used; both are collision-broken and far too fast for passwords.
+
+### WEB02-002 — TLS certificate verification disabled
+Certificate or hostname checking is turned off for an outbound connection.
+
+### WEB02-003 — Weak or deprecated cipher
+ECB mode, DES/3DES, RC4 or the deprecated `createCipher` is used.
+
+### WEB02-004 — Non-cryptographic random for a security value
+`random` / `Math.random` generates something named like a token, key or nonce.
+
+## WEB03 — A03 Injection
+
+### WEB03-001 — SQL built by string formatting
+A query is assembled with f-strings, %, .format() or concatenation.
+
+### WEB03-002 — OS command built from variable data
+A shell command is assembled at runtime or run with shell=True.
+
+### WEB03-003 — eval/exec on a non-literal
+`eval`, `exec` or `new Function` runs a runtime-built string as code.
+
+### WEB03-004 — Unescaped output sink (XSS / template injection)
+Variable data is written as raw HTML or into a template string.
+
+## WEB04 — A04 Insecure Design
+
+Not statically detectable: this is a property of data, design or model behaviour, not of a line of source. No rule is claimed for it.
+
+## WEB05 — A05 Security Misconfiguration
+
+### WEB05-001 — Debug mode enabled
+The framework's debugger / debug pages are switched on in code.
+
+### WEB05-002 — Insecure framework setting
+Wildcard allowed hosts, insecure cookie flags, or XML external entities enabled.
+
+## WEB06 — A06 Vulnerable and Outdated Components
+
+Not statically detectable: this is a property of data, design or model behaviour, not of a line of source. No rule is claimed for it.
+Use pip-audit or osv-scanner for known-vulnerable dependencies.
+
+## WEB07 — A07 Identification and Authentication Failures
+
+### WEB07-001 — JWT verification weakened or disabled
+Signature, expiry or audience checks are turned off, or the `none` algorithm is allowed.
+
+### WEB07-002 — Hard-coded application secret or password
+A SECRET_KEY, JWT secret or password is a string literal in source.
+
+## WEB08 — A08 Software and Data Integrity Failures
+
+### WEB08-001 — Unsafe deserialization
+pickle/marshal/yaml.load or a similar deserializer is applied to data.
+
+### WEB08-002 — Remote script piped straight to a shell
+`curl ... | sh` runs unverified code fetched at execution time.
+
+## WEB09 — A09 Security Logging and Monitoring Failures
+
+### WEB09-001 — Sensitive value written to the log
+A password, token or key is passed to a logging or print call.
+
+### WEB09-002 — Exception silently swallowed
+A broad `except: pass` / empty `catch {}` hides failures, including attacks.
+
+## WEB10 — A10 Server-Side Request Forgery
+
+### WEB10-001 — Outbound request to a request-supplied URL
+An HTTP client is called with a URL taken from the incoming request (SSRF).

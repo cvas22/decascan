@@ -7,6 +7,7 @@ from dataclasses import dataclass
 
 from ..core.context import ScanContext
 from ..core.findings import Finding
+from ..core.standards import RISK_STANDARD
 
 RuleFn = Callable[[ScanContext], Iterable[Finding]]
 
@@ -18,6 +19,10 @@ class Rule:
     name: str
     description: str
     fn: RuleFn
+
+    @property
+    def standard(self) -> str:
+        return RISK_STANDARD[self.mcp_id]
 
 
 REGISTRY: list[Rule] = []
