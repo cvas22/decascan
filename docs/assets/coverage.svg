@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 784 324" width="784" height="324" role="img" aria-labelledby="ct cd">
+<title id="ct">Top 10 coverage</title>
+<desc id="cd">For each list, which of its ten categories have rules, are not statically detectable, or have no rules yet.</desc>
+<defs><linearGradient id="cbg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#071426"/><stop offset="1" stop-color="#12335a"/></linearGradient></defs>
+<rect width="784" height="324" rx="20" fill="url(#cbg)"/>
+<g font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
+<text x="28" y="44" font-size="22" font-weight="700" fill="#e2e8f0">What each list covers</text>
+<text x="28" y="68" font-size="14" fill="#94a3b8">One square per category. Teal has rules; grey cannot be established from source code.</text>
+<text x="28" y="118" font-size="17" font-weight="600" fill="#e2e8f0">MCP Top 10</text>
+<text x="28" y="136" font-size="13" fill="#94a3b8">10 of 10 categories · 26 rules</text>
+<g><title>MCP01 Token Mismanagement &amp; Secret Exposure: has rules</title><rect x="214" y="100" width="42" height="34" rx="8" fill="#2dd4bf" fill-opacity="0.95"/><text x="235" y="122" text-anchor="middle" font-size="12" font-weight="700" fill="#06202b">01</text></g>
+<g><title>MCP02 Privilege Escalation via Scope Creep: has rules</title><rect x="262" y="100" width="42" height="34" rx="8" fill="#2dd4bf" fill-opacity="0.95"/><text x="283" y="122" text-anchor="middle" font-size="12" font-weight="700" fill="#06202b">02</text></g>
+<g><title>MCP03 Tool Poisoning: has rules</title><rect x="310" y="100" width="42" height="34" rx="8" fill="#2dd4bf" fill-opacity="0.95"/><text x="331" y="122" text-anchor="middle" font-size="12" font-weight="700" fill="#06202b">03</text></g>
+<g><title>MCP04 Supply Chain / Dependency Tampering: has rules</title><rect x="358" y="100" width="42" height="34" rx="8" fill="#2dd4bf" fill-opacity="0.95"/><text x="379" y="122" text-anchor="middle" font-size="12" font-weight="700" fill="#06202b">04</text></g>
+<g><title>MCP05 Command Injection &amp; Execution: has rules</title><rect x="406" y="100" width="42" height="34" rx="8" fill="#2dd4bf" fill-opacity="0.95"/><text x="427" y="122" text-anchor="middle" font-size="12" font-weight="700" fill="#06202b">05</text></g>
+<g><title>MCP06 Prompt Injection via Contextual Payloads: has rules</title><rect x="454" y="100" width="42" height="34" rx="8" fill="#2dd4bf" fill-opacity="0.95"/><text x="475" y="122" text-anchor="middle" font-size="12" font-weight="700" fill="#06202b">06</text></g>
+<g><title>MCP07 Insufficient Authentication &amp; Authorization: has rules</title><rect x="502" y="100" width="42" height="34" rx="8" fill="#2dd4bf" fill-opacity="0.95"/><text x="523" y="122" text-anchor="middle" font-size="12" font-weight="700" fill="#06202b">07</text></g>
+<g><title>MCP08 Lack of Audit &amp; Telemetry: has rules</title><rect x="550" y="100" width="42" height="34" rx="8" fill="#2dd4bf" fill-opacity="0.95"/><text x="571" y="122" text-anchor="middle" font-size="12" font-weight="700" fill="#06202b">08</text></g>
+<g><title>MCP09 Shadow MCP Servers: has rules</title><rect x="598" y="100" width="42" height="34" rx="8" fill="#2dd4bf" fill-opacity="0.95"/><text x="619" y="122" text-anchor="middle" font-size="12" font-weight="700" fill="#06202b">09</text></g>
+<g><title>MCP10 Context Injection &amp; Over-Sharing: has rules</title><rect x="646" y="100" width="42" height="34" rx="8" fill="#2dd4bf" fill-opacity="0.95"/><text x="667" y="122" text-anchor="middle" font-size="12" font-weight="700" fill="#06202b">10</text></g>
+<text x="28" y="172" font-size="17" font-weight="600" fill="#e2e8f0">LLM Apps Top 10</text>
+<text x="28" y="190" font-size="13" fill="#94a3b8">7 of 10 categories · 9 rules</text>
+<g><title>LLM01 Prompt Injection: has rules</title><rect x="214" y="154" width="42" height="34" rx="8" fill="#2dd4bf" fill-opacity="0.95"/><text x="235" y="176" text-anchor="middle" font-size="12" font-weight="700" fill="#06202b">01</text></g>
+<g><title>LLM02 Sensitive Information Disclosure: has rules</title><rect x="262" y="154" width="42" height="34" rx="8" fill="#2dd4bf" fill-opacity="0.95"/><text x="283" y="176" text-anchor="middle" font-size="12" font-weight="700" fill="#06202b">02</text></g>
+<g><title>LLM03 Supply Chain: has rules</title><rect x="310" y="154" width="42" height="34" rx="8" fill="#2dd4bf" fill-opacity="0.95"/><text x="331" y="176" text-anchor="middle" font-size="12" font-weight="700" fill="#06202b">03</text></g>
+<g><title>LLM04 Data and Model Poisoning: not statically detectable</title><rect x="358" y="154" width="42" height="34" rx="8" fill="#64748b" fill-opacity="0.55"/><text x="379" y="176" text-anchor="middle" font-size="12" font-weight="700" fill="#e2e8f0">04</text></g>
+<g><title>LLM05 Improper Output Handling: has rules</title><rect x="406" y="154" width="42" height="34" rx="8" fill="#2dd4bf" fill-opacity="0.95"/><text x="427" y="176" text-anchor="middle" font-size="12" font-weight="700" fill="#06202b">05</text></g>
+<g><title>LLM06 Excessive Agency: has rules</title><rect x="454" y="154" width="42" height="34" rx="8" fill="#2dd4bf" fill-opacity="0.95"/><text x="475" y="176" text-anchor="middle" font-size="12" font-weight="700" fill="#06202b">06</text></g>
+<g><title>LLM07 System Prompt Leakage: has rules</title><rect x="502" y="154" width="42" height="34" rx="8" fill="#2dd4bf" fill-opacity="0.95"/><text x="523" y="176" text-anchor="middle" font-size="12" font-weight="700" fill="#06202b">07</text></g>
+<g><title>LLM08 Vector and Embedding Weaknesses: not statically detectable</title><rect x="550" y="154" width="42" height="34" rx="8" fill="#64748b" fill-opacity="0.55"/><text x="571" y="176" text-anchor="middle" font-size="12" font-weight="700" fill="#e2e8f0">08</text></g>
+<g><title>LLM09 Misinformation: not statically detectable</title><rect x="598" y="154" width="42" height="34" rx="8" fill="#64748b" fill-opacity="0.55"/><text x="619" y="176" text-anchor="middle" font-size="12" font-weight="700" fill="#e2e8f0">09</text></g>
+<g><title>LLM10 Unbounded Consumption: has rules</title><rect x="646" y="154" width="42" height="34" rx="8" fill="#2dd4bf" fill-opacity="0.95"/><text x="667" y="176" text-anchor="middle" font-size="12" font-weight="700" fill="#06202b">10</text></g>
+<text x="28" y="226" font-size="17" font-weight="600" fill="#e2e8f0">Web Top 10</text>
+<text x="28" y="244" font-size="13" fill="#94a3b8">8 of 10 categories · 20 rules</text>
+<g><title>WEB01 A01 Broken Access Control: has rules</title><rect x="214" y="208" width="42" height="34" rx="8" fill="#2dd4bf" fill-opacity="0.95"/><text x="235" y="230" text-anchor="middle" font-size="12" font-weight="700" fill="#06202b">01</text></g>
+<g><title>WEB02 A02 Cryptographic Failures: has rules</title><rect x="262" y="208" width="42" height="34" rx="8" fill="#2dd4bf" fill-opacity="0.95"/><text x="283" y="230" text-anchor="middle" font-size="12" font-weight="700" fill="#06202b">02</text></g>
+<g><title>WEB03 A03 Injection: has rules</title><rect x="310" y="208" width="42" height="34" rx="8" fill="#2dd4bf" fill-opacity="0.95"/><text x="331" y="230" text-anchor="middle" font-size="12" font-weight="700" fill="#06202b">03</text></g>
+<g><title>WEB04 A04 Insecure Design: not statically detectable</title><rect x="358" y="208" width="42" height="34" rx="8" fill="#64748b" fill-opacity="0.55"/><text x="379" y="230" text-anchor="middle" font-size="12" font-weight="700" fill="#e2e8f0">04</text></g>
+<g><title>WEB05 A05 Security Misconfiguration: has rules</title><rect x="406" y="208" width="42" height="34" rx="8" fill="#2dd4bf" fill-opacity="0.95"/><text x="427" y="230" text-anchor="middle" font-size="12" font-weight="700" fill="#06202b">05</text></g>
+<g><title>WEB06 A06 Vulnerable and Outdated Components: not statically detectable</title><rect x="454" y="208" width="42" height="34" rx="8" fill="#64748b" fill-opacity="0.55"/><text x="475" y="230" text-anchor="middle" font-size="12" font-weight="700" fill="#e2e8f0">06</text></g>
+<g><title>WEB07 A07 Identification and Authentication Failures: has rules</title><rect x="502" y="208" width="42" height="34" rx="8" fill="#2dd4bf" fill-opacity="0.95"/><text x="523" y="230" text-anchor="middle" font-size="12" font-weight="700" fill="#06202b">07</text></g>
+<g><title>WEB08 A08 Software and Data Integrity Failures: has rules</title><rect x="550" y="208" width="42" height="34" rx="8" fill="#2dd4bf" fill-opacity="0.95"/><text x="571" y="230" text-anchor="middle" font-size="12" font-weight="700" fill="#06202b">08</text></g>
+<g><title>WEB09 A09 Security Logging and Monitoring Failures: has rules</title><rect x="598" y="208" width="42" height="34" rx="8" fill="#2dd4bf" fill-opacity="0.95"/><text x="619" y="230" text-anchor="middle" font-size="12" font-weight="700" fill="#06202b">09</text></g>
+<g><title>WEB10 A10 Server-Side Request Forgery: has rules</title><rect x="646" y="208" width="42" height="34" rx="8" fill="#2dd4bf" fill-opacity="0.95"/><text x="667" y="230" text-anchor="middle" font-size="12" font-weight="700" fill="#06202b">10</text></g>
+<rect x="28" y="289" width="14" height="14" rx="4" fill="#2dd4bf"/>
+<text x="50" y="301" font-size="13" fill="#cbd5e1">has rules</text>
+<rect x="127" y="289" width="14" height="14" rx="4" fill="#64748b"/>
+<text x="149" y="301" font-size="13" fill="#cbd5e1">not statically detectable</text>
+<rect x="338" y="289" width="14" height="14" rx="4" fill="#fbbf24"/>
+<text x="360" y="301" font-size="13" fill="#cbd5e1">no rules yet</text>
+</g>
+</svg>

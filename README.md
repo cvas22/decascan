@@ -1,7 +1,21 @@
-# mcp-sift
+<div align="center">
+
+<img src="docs/assets/banner.svg" alt="mcp-sift: an offline OWASP Top 10 scanner for MCP, LLM and web code" width="820">
+
+[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](#install)
+[![License Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue?style=for-the-badge)](LICENSE)
+[![Runs offline](https://img.shields.io/badge/runs-offline-2dd4bf?style=for-the-badge)](#how-it-works-and-where-it-stops)
+[![OWASP Top 10 lists](https://img.shields.io/badge/OWASP_Top_10-MCP_%C2%B7_LLM_%C2%B7_Web-0b1f3a?style=for-the-badge)](#what-it-checks)
+[![Status pre-release](https://img.shields.io/badge/status-pre--release-f59e0b?style=for-the-badge)](#status)
 
 **An offline security scanner for Python and TypeScript code, mapped to three OWASP Top 10 lists:
 the MCP Top 10, the Top 10 for LLM Applications, and the web Top 10.**
+
+[Install](#install) · [Use](#use) · [CI/CD](#cicd) · [Rules](docs/rules.md) · [Changelog](CHANGELOG.md)
+
+</div>
+
+---
 
 MCP servers run with the privileges of the developer who installed them: they read files, call
 internal APIs, and execute commands on behalf of an LLM that anything in its context window can
@@ -16,6 +30,14 @@ No API key. No network calls. No account. `mcp-sift scan .` and you have your an
 A real scan of `tests/fixtures/vulnerable_ts` — a 30-line TypeScript MCP server. Fifteen findings in
 about 10 ms. Reproduce it yourself with the command below. Findings are printed most severe first;
 the first six are shown and the other nine are summarised at the end.
+
+<div align="center">
+  <img src="docs/assets/example-run.svg" alt="Terminal output of mcp-sift scanning a vulnerable TypeScript MCP server" width="860">
+  <p><em>A real run: the first two of fifteen findings, then the summary.</em></p>
+</div>
+
+<details>
+<summary>The same run as text (six findings)</summary>
 
 ```console
 $ mcp-sift scan tests/fixtures/vulnerable_ts
@@ -108,6 +130,8 @@ MEDIUM        4
 15 finding(s) across 3 files (26 rules, 0.01s)
 ```
 
+</details>
+
 Four things that run demonstrates, in order of how much they matter:
 
 - **The secret is redacted** (`ghp_********`). A scanner that echoes a live credential into your CI
@@ -125,6 +149,8 @@ Four things that run demonstrates, in order of how much they matter:
 
 By contrast, `mcp-sift scan tests/fixtures/clean_python` prints a green "No findings" and exits `0`,
 and so do the real `mcp-server-fetch` and `mcp-server-time`.
+
+---
 
 ## Install
 
@@ -261,10 +287,17 @@ prints the catalog; `--json --cached` prints the snapshot shipped in the package
 and `--export PATH` rewrites the snapshot.
 See [docs/standards.md](https://github.com/cvas22/mcp-sift/blob/main/docs/standards.md).
 
+---
+
 ## What it checks
 
 Three OWASP Top 10 lists, auto-detected per codebase by default (or chosen with `--standard`) and
 grouped by list and category in the output:
+
+<div align="center">
+  <img src="docs/assets/coverage.svg" alt="Which categories of each Top 10 list have rules" width="780">
+  <p><em>Teal squares have rules; grey ones cannot be established from source code.</em></p>
+</div>
 
 | List (`--standard`) | Covered | Not statically detectable |
 |---------------------|---------|---------------------------|
@@ -354,6 +387,23 @@ than silently skipped: **LLM04** data and model poisoning, **LLM08** vector and 
 
 ## How it works, and where it stops
 
+<div align="center">
+  <img src="docs/assets/workflow.svg" alt="The five stages of a scan: read, detect, check, tidy, report" width="900">
+  <p><em>From files to findings: everything happens locally, in one process.</em></p>
+</div>
+
+A scan has five stages:
+
+1. **Read**: walks the directory (never following symlinks, never entering `node_modules` or virtualenvs)
+   and parses Python, TypeScript/JavaScript, `mcp.json` manifests and dependency files.
+2. **Detect**: picks the Top 10 lists from imports and dependencies, or runs all of them when it cannot tell.
+3. **Check**: runs the rules of each chosen list over the parsed facts.
+4. **Tidy**: drops what you suppressed or set below `--min-severity`, and merges one defect that several
+   lists report into a single finding.
+5. **Report**: prints it, or writes JSON, SARIF or GitHub annotations, and sets the exit code.
+
+The detail of each stage, and where it stops:
+
 **Python is parsed with a real AST.** Callees are resolved through the import alias map, so
 `import subprocess as sp; sp.run(...)` and `from subprocess import run; run(...)` both land on the
 same capability. Tools are found in all three shapes the ecosystem actually uses: FastMCP
@@ -419,6 +469,8 @@ As a check against real code, v0.1 scans clean on the official `mcp-server-fetch
 That's a sample of two, which is not a false-positive rate; measuring one properly across ~100
 public servers is a v0.2 deliverable.
 
+---
+
 ## Development
 
 CI runs the unit tests on every push and pull request: the full suite with coverage (floor in
@@ -433,6 +485,7 @@ pytest --cov=mcp_sift                    # with coverage (CI enforces the floor 
 ruff check .                             # lint
 python scripts/generate_rule_docs.py --check   # docs/rules.md matches the rules
 uv build                                 # wheel and sdist into dist/
+python scripts/generate_assets.py        # redraw the README's terminal screenshot and coverage chart
 ```
 
 The same checks run in CI; run them before opening a pull request.
