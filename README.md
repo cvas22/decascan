@@ -549,6 +549,8 @@ and `CHANGELOG.md` when behaviour changes. Rules, parsers, the pipeline and the 
 code owners (see [.github/CODEOWNERS](https://github.com/cvas22/decascan/blob/main/.github/CODEOWNERS));
 GitHub asks them for a review automatically.
 
+Using DecaScan in production? [Add your team →](https://github.com/cvas22/decascan/issues/new?title=Adopter%3A+) as an issue, or see [ADOPTERS.md](https://github.com/cvas22/decascan/blob/main/ADOPTERS.md).
+
 ## Status
 
 v0.1, pre-release. Aligned to the OWASP MCP Top 10 v0.1, the Top 10 for LLM Applications 2025, and
