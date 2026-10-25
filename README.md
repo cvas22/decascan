@@ -446,9 +446,8 @@ server is Python or TypeScript. The pattern-based rules share the helpers in `ru
 **Adding a rule.** Register it with `@rule(id=..., mcp_id=<risk id>, ...)` and add positive and
 negative samples to `tests/test_web_llm_rules.py` (LLM and web rules) or a case to
 `tests/test_rules.py` (MCP rules). The LLM and web sections of `docs/rules.md` are generated from the
-rules and those samples: run `python scripts/generate_rule_docs.py` to refresh them (a test fails if
-they are stale). MCP rule sections are written by hand under `### <RULE-ID>`; a test fails if any
-rule is undocumented.
+rules and those samples: run `python scripts/generate_rule_docs.py` to refresh them (`--check`
+reports whether they are stale). MCP rule sections are written by hand under `### <RULE-ID>`.
 
 **Adding a Top 10 list.** Define a `Standard` in `core/standards.py` (id, version, risk ids and
 names, and the risks that are `not_static`), add it to `STANDARDS`, and write its rule module. Risk

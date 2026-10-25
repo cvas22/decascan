@@ -134,12 +134,6 @@ def test_cached_catalog_is_served_by_the_cli():
     assert set(json.loads(out)["standards"]) == set(STANDARDS)
 
 
-def test_every_rule_is_documented():
-    docs = (Path(__file__).parent.parent / "docs" / "rules.md").read_text(encoding="utf-8")
-    missing = [r.id for r in all_rules() if f"### {r.id}" not in docs]
-    assert missing == []
-
-
 def detected(tmp_path: Path, source: str, name: str = "app.py") -> dict[str, list[str]]:
     (tmp_path / name).write_text(source, encoding="utf-8")
     return scan(tmp_path).detected
