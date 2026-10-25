@@ -726,8 +726,8 @@ _LOG_CALL = re.compile(
 )
 _SENSITIVE = r"(?:password|passwd|secret|api_?key|authorization|access_?token|refresh_?token|private_?key|ssn|card_?number|cvv)"
 _SENSITIVE_IN_LOG = re.compile(
-    rf"\{{[^}}\n]*{_SENSITIVE}[^}}\n]*\}}|\$\{{[^}}\n]*{_SENSITIVE}[^}}\n]*\}}|,\s*[\w.\[\]\"']*{_SENSITIVE}\w*\s*[,)]|"
-    rf"%\s*\(?[^)\n]*{_SENSITIVE}|\+\s*[\w.]*{_SENSITIVE}",
+    rf"\{{[^}}\n]*{_SENSITIVE}[^}}\n]*\}}|\$\{{[^}}\n]*{_SENSITIVE}[^}}\n]*\}}|,\s*[\w.\[\]\"']*{_SENSITIVE}\w*\s*(?:[,)]|$)|"
+    rf"%\s*\(?[^)\n]*{_SENSITIVE}|\+\s*[\w.]*{_SENSITIVE}|,\s*(?:token|jwt|bearer)\s*(?:[,)]|$)",
     re.I,
 )
 

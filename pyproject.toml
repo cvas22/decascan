@@ -47,6 +47,17 @@ packages = ["src/mcp_sift"]
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 
+[tool.coverage.run]
+source = ["mcp_sift"]
+
+[tool.coverage.report]
+# Measured at 91% when this gate was added; the floor leaves room for a small untested change but
+# fails a PR that adds a feature without tests.
+fail_under = 88
+show_missing = true
+skip_covered = true
+exclude_lines = ["pragma: no cover", "if __name__ == .__main__.:"]
+
 [tool.ruff]
 # Findings carry their remediation as prose. 110 keeps that text readable in-source instead of
 # shredding every sentence across four continuation strings.

@@ -172,6 +172,19 @@ drops into CI unchanged:
 Suppress a finding you've reviewed by putting a suppression marker on the same source line —
 any of `mcp-sift:ignore`, `mcp-sift: ignore`, or `nosec mcp-sift`.
 
+## CI/CD
+
+A GitHub Action, a pre-commit hook and copy-paste recipes for GitLab, Jenkins, Azure Pipelines and
+CircleCI are in [docs/ci.md](https://github.com/cvas22/mcp-sift/blob/main/docs/ci.md).
+
+```yaml
+- uses: actions/checkout@v4
+- uses: cvas22/mcp-sift@main # pin to a tag or commit SHA
+  with:
+    fail-on: high
+    upload-sarif: "true"
+```
+
 ## CLI reference
 
 Three commands: `scan`, `rules` and `standards`. `PATH` may be a directory **or a single file**.
@@ -182,7 +195,7 @@ $ mcp-sift scan PATH [options]
 
 | Option | Default | What it does |
 |--------|---------|--------------|
-| `-o, --output {pretty,json,sarif}` | `pretty` | Output format. `sarif` uploads to GitHub Code Scanning. |
+| `-o, --output {pretty,json,sarif,github}` | `pretty` | Output format. `sarif` uploads to GitHub Code Scanning; `github` prints PR annotations. |
 | `-f, --output-file PATH` | stdout | Write output to a file instead of stdout. |
 | `--fail-on {critical,high,medium,low,info}` | `high` | Exit non-zero when a finding at this severity or above is present. |
 | `--min-severity {critical,high,medium,low,info}` | `info` | Drop findings below this severity from the report entirely. |
@@ -354,6 +367,10 @@ That's a sample of two, which is not a false-positive rate; measuring one proper
 public servers is a v0.2 deliverable.
 
 ## Development
+
+CI runs the unit tests on every push and pull request: the full suite with coverage (floor in
+`pyproject.toml`, reports uploaded as an artifact and summarised on the run page), repeated across
+Linux, Windows, macOS and several Pythons, and the release workflow re-runs it before publishing.
 
 ```bash
 uv venv --python 3.12

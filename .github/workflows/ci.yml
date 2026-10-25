@@ -4,8 +4,61 @@ on:
   push:
     branches: [main]
   pull_request:
+  # Lets the release workflow run the whole suite before it publishes anything.
+  workflow_call:
 
 jobs:
+  # The unit-test gate: the full suite with coverage, a JUnit report, and a hard floor on coverage
+  # (`fail_under` in pyproject.toml). The matrix below repeats the suite across OSes and Pythons;
+  # this job is the one that reports results.
+  unit-tests:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - run: pip install -e ".[dev]"
+
+      - name: unit tests with coverage
+        run: >-
+          pytest -q --junitxml=junit.xml
+          --cov=mcp_sift --cov-report=term-missing --cov-report=xml --cov-report=html
+
+      - name: coverage summary
+        if: always()
+        run: |
+          {
+            echo "### Unit tests"
+            echo
+            python - <<'PY'
+          import xml.etree.ElementTree as ET
+          suite = ET.parse("junit.xml").getroot()
+          suite = suite if suite.tag == "testsuite" else suite[0]
+          print(f"{int(suite.get('tests')) - int(suite.get('failures')) - int(suite.get('errors')) - int(suite.get('skipped'))}"
+                f" passed, {suite.get('failures')} failed, {suite.get('errors')} errors, {suite.get('skipped')} skipped")
+          cov = ET.parse("coverage.xml").getroot()
+          print()
+          print(f"Line coverage: {float(cov.get('line-rate')) * 100:.1f}%")
+          PY
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: upload test and coverage reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-reports
+          path: |
+            junit.xml
+            coverage.xml
+            htmlcov/
+          if-no-files-found: warn
+
   # Native GitHub-hosted VMs: the three OSes GitHub gives a real machine for, across every
   # Python the project supports (requires-python >=3.10).
   test:
@@ -47,10 +100,32 @@ jobs:
       - name: scan the clean fixture (expect none)
         run: mcp-sift scan tests/fixtures/clean_python
 
+      # The LLM and web Top 10 rule sets, with auto-detection choosing the lists.
+      - name: scan the vulnerable web/LLM fixture (expect findings)
+        shell: bash
+        run: |
+          mcp-sift scan tests/fixtures/vulnerable_webllm && exit 1
+          echo "exited non-zero as expected"
+
+      - name: scan the clean web/LLM fixture (expect none)
+        run: mcp-sift scan tests/fixtures/clean_webllm
+
       - name: build wheel
         run: |
           python -m pip install build
           python -m build --wheel
+
+      # The cached Top 10 catalog must ship inside the wheel.
+      - name: wheel contains the cached catalog
+        shell: bash
+        run: |
+          python - <<'PY'
+          import glob, zipfile
+          wheel = glob.glob("dist/*.whl")[0]
+          names = zipfile.ZipFile(wheel).namelist()
+          assert any(n.endswith("mcp_sift/data/top10.json") for n in names), names
+          print("ok:", wheel)
+          PY
 
   # Linux distro userlands people actually `pip install mcp-sift` onto. All run on an Ubuntu host
   # but inside the distro's container, so glibc-vs-musl and dnf/apt/apk differences are exercised.
@@ -107,7 +182,85 @@ jobs:
       - name: scan the clean fixture (expect none)
         run: mcp-sift scan tests/fixtures/clean_python
 
+      # The LLM and web Top 10 rule sets, with auto-detection choosing the lists.
+      - name: scan the vulnerable web/LLM fixture (expect findings)
+        shell: bash
+        run: |
+          mcp-sift scan tests/fixtures/vulnerable_webllm && exit 1
+          echo "exited non-zero as expected"
+
+      - name: scan the clean web/LLM fixture (expect none)
+        run: mcp-sift scan tests/fixtures/clean_webllm
+
       - name: build wheel
         run: |
           python -m pip install build
           python -m build --wheel
+
+      # The cached Top 10 catalog must ship inside the wheel.
+      - name: wheel contains the cached catalog
+        shell: bash
+        run: |
+          python - <<'PY'
+          import glob, zipfile
+          wheel = glob.glob("dist/*.whl")[0]
+          names = zipfile.ZipFile(wheel).namelist()
+          assert any(n.endswith("mcp_sift/data/top10.json") for n in names), names
+          print("ok:", wheel)
+          PY
+
+  # The composite action other repositories consume with `uses: cvas22/mcp-sift@...`, exercised
+  # from this checkout so a broken action.yml fails here instead of in someone else's pipeline.
+  action:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: clean fixture passes
+        id: clean
+        uses: ./
+        with:
+          path: tests/fixtures/clean_webllm
+          sarif-file: clean.sarif
+
+      - name: vulnerable fixture fails the job
+        id: vulnerable
+        uses: ./
+        continue-on-error: true
+        with:
+          path: tests/fixtures/vulnerable_webllm
+          standard: web llm
+          sarif-file: vulnerable.sarif
+
+      - name: check outcomes and SARIF
+        shell: bash
+        run: |
+          test "${{ steps.clean.outcome }}" = success
+          test "${{ steps.vulnerable.outcome }}" = failure
+          test "${{ steps.vulnerable.outputs.exit-code }}" = 1
+          python - <<'PY'
+          import json
+          sarif = json.load(open("vulnerable.sarif"))
+          assert sarif["version"] == "2.1.0" and sarif["runs"][0]["results"], "no SARIF results"
+          assert not json.load(open("clean.sarif"))["runs"][0]["results"]
+          print("sarif ok")
+          PY
+
+  # One required check for branch protection: it fails if any job above failed or was cancelled,
+  # so the rules do not need updating each time a matrix entry is added or renamed.
+  ci-pass:
+    if: always()
+    needs: [unit-tests, test, linux-distros, action]
+    runs-on: ubuntu-latest
+    steps:
+      - name: all jobs succeeded
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "job results: $RESULTS"
+          for r in $RESULTS; do
+            [ "$r" = success ] || { echo "a required job did not succeed"; exit 1; }
+          done
+
