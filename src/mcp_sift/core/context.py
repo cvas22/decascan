@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import time
 from collections.abc import Callable, Iterator
 from dataclasses import dataclass, field
 from functools import cached_property
@@ -76,15 +77,28 @@ class ScanContext:
         not code. Cached, since every rule asks for every file.
         """
         if rel_path not in self._masked_cache:
-            self._masked_cache[rel_path] = mask_source(rel_path, self.text(rel_path))
+            original = self.text(rel_path)
+            masked = mask_source(rel_path, original)
+            self._masked_cache[rel_path] = masked
+            blanked = sum(1 for a, b in zip(original, masked, strict=False) if a != b)
+            if blanked:
+                log.debug(
+                    "comments and docstrings masked",
+                    extra={"file": rel_path, "chars_blanked": blanked, "chars": len(original)},
+                )
         return self._masked_cache[rel_path]
 
     def is_minified(self, rel_path: str, max_line_chars: int) -> bool:
         """Whether any line is longer than `max_line_chars` (cached: every rule asks per file)."""
         if rel_path not in self._minified_cache:
-            self._minified_cache[rel_path] = any(
-                len(line) > max_line_chars for line in self.text(rel_path).split("\n")
-            )
+            longest = max((len(line) for line in self.text(rel_path).split("\n")), default=0)
+            self._minified_cache[rel_path] = longest > max_line_chars
+            if longest > max_line_chars:
+                # Logged here, once per file, not by each of the 29 rules that ask.
+                log.debug(
+                    "file skipped by pattern rules: minified or generated",
+                    extra={"file": rel_path, "longest_line": longest, "limit": max_line_chars},
+                )
         return self._minified_cache[rel_path]
 
     def line(self, rel_path: str, line_no: int) -> str:
@@ -124,6 +138,10 @@ class ScanContext:
         return None
 
 
+SLOW_FILE_SECONDS = 1.0
+_JS_SUFFIXES = (".ts", ".tsx", ".js", ".jsx", ".mjs", ".mts", ".cjs")
+
+
 def _walk(root: Path, excludes: tuple[str, ...], counts: dict[str, int]) -> Iterator[Path]:
     """Files under `root`, without entering excluded directories or following symlinks.
 
@@ -154,8 +172,16 @@ def _walk(root: Path, excludes: tuple[str, ...], counts: dict[str, int]) -> Iter
 
 def _guarded(ctx: ScanContext, rel: str, what: str, fn: Callable, *args):
     """Run one parser on one file; a crash costs that file's facts, never the whole scan."""
+    started = time.perf_counter()
     try:
-        return fn(*args)
+        result = fn(*args)
+        elapsed = time.perf_counter() - started
+        if elapsed > SLOW_FILE_SECONDS:
+            log.warning(
+                "slow file",
+                extra={"file": rel, "parser": what, "seconds": round(elapsed, 2)},
+            )
+        return result
     except Exception as exc:  # hostile input can raise RecursionError, MemoryError-adjacent errors, ...
         message = f"{rel}: {what} failed ({type(exc).__name__}: {str(exc)[:80]})"
         ctx.errors.append(message)
@@ -175,9 +201,13 @@ def build_context(root: Path, config: ScanConfig) -> ScanContext:
     else:
         candidates = _walk(root, config.excludes, counts)
 
+    started = time.perf_counter()
+    bytes_read = 0
+    kinds: dict[str, int] = {}
     for path in candidates:
         try:
-            if path.stat().st_size > config.max_file_bytes:
+            size = path.stat().st_size
+            if size > config.max_file_bytes:
                 counts["too_large"] += 1
                 log.debug(
                     "file skipped: over size limit",
@@ -206,29 +236,64 @@ def build_context(root: Path, config: ScanConfig) -> ScanContext:
 
         rel = path.relative_to(root).as_posix()
         ctx.files.append(rel)
+        bytes_read += size
+        kind = "python" if suffix == ".py" else "javascript" if suffix in _JS_SUFFIXES else "other"
+        kinds[kind] = kinds.get(kind, 0) + 1
+        log.debug("file read", extra={"file": rel, "kind": kind, "bytes": size})
 
         if is_lockfile(name):
             ctx.lockfiles.append(rel)
+            log.debug("lockfile found", extra={"file": rel})
 
         if is_dependency_file(name):
             parsed = _guarded(ctx, rel, "dependency parser", load_dependencies, path, rel)
             if parsed:
                 ctx.dependencies.extend(parsed[0])
                 ctx.install_scripts.extend(parsed[1])
+                log.debug(
+                    "dependencies read",
+                    extra={"file": rel, "dependencies": len(parsed[0]), "install_hooks": len(parsed[1])},
+                )
 
         if is_manifest_name(name):
             manifest = _guarded(ctx, rel, "manifest parser", load_manifest, path, root)
             if manifest:
                 ctx.manifests.append(manifest)
+                log.debug(
+                    "manifest read",
+                    extra={
+                        "file": rel,
+                        "tools": len(manifest.tools),
+                        "scopes": len(manifest.scopes),
+                        "servers": len(manifest.servers),
+                        "network_exposed": manifest.is_network_exposed,
+                        "auth_declared": manifest.declares_auth_key,
+                    },
+                )
+            else:
+                log.debug("manifest ignored: not a JSON/YAML object", extra={"file": rel})
 
         if suffix == ".py":
             facts = _guarded(ctx, rel, "python parser", parse_python, rel, ctx.text(rel))
             if facts:
                 ctx.source_facts[rel] = facts
-        elif suffix in (".ts", ".tsx", ".js", ".jsx", ".mjs", ".mts", ".cjs"):
+        elif suffix in _JS_SUFFIXES:
             facts = _guarded(ctx, rel, "javascript parser", parse_javascript, rel, ctx.text(rel))
             if facts:
                 ctx.source_facts[rel] = facts
+
+        facts = ctx.source_facts.get(rel)
+        if facts and (facts.tools or facts.servers or facts.calls):
+            log.debug(
+                "source facts",
+                extra={
+                    "file": rel,
+                    "tools": len(facts.tools),
+                    "servers": len(facts.servers),
+                    "calls": len(facts.calls),
+                    "taint_flows": len(facts.taint_flows),
+                },
+            )
 
     log.info(
         "context built",
@@ -237,6 +302,10 @@ def build_context(root: Path, config: ScanConfig) -> ScanContext:
             "manifests": len(ctx.manifests),
             "tools": len(ctx.all_tools),
             "dependencies": len(ctx.dependencies),
+            "lockfiles": len(ctx.lockfiles),
+            "bytes": bytes_read,
+            "kinds": ", ".join(f"{k}={v}" for k, v in sorted(kinds.items())),
+            "seconds": round(time.perf_counter() - started, 3),
             **{f"skipped_{k}": v for k, v in counts.items()},
         },
     )

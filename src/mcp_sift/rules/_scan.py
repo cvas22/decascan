@@ -63,7 +63,6 @@ def source_files(ctx: ScanContext) -> Iterator[SourceFile]:
         if not rel.lower().endswith(SOURCE_SUFFIXES) or is_test_path(rel):
             continue
         if ctx.is_minified(rel, MAX_LINE_CHARS):
-            log.debug("file skipped by pattern rules: minified or generated", extra={"file": rel})
             continue
         yield SourceFile(rel, ctx.masked_text(rel), not rel.lower().endswith(".py"))
 

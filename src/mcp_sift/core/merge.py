@@ -16,6 +16,9 @@ from collections import defaultdict
 from dataclasses import replace
 
 from .findings import Finding
+from .log import get_logger
+
+log = get_logger("merge")
 
 
 def _strength(finding: Finding) -> tuple:
@@ -48,5 +51,15 @@ def merge_cross_list(findings: list[Finding]) -> list[Finding]:
         # A second finding from the primary's own list is a different rule and is kept as it was.
         same_list = [f for f in others if f.standard == primary.standard]
         merged.append(replace(primary, metadata={**primary.metadata, "also_maps_to": ", ".join(also)}))
+        log.debug(
+            "merged duplicate",
+            extra={
+                "file": primary.file_path,
+                "line": primary.line,
+                "cwe": primary.cwe_id,
+                "kept": primary.rule_id,
+                "also": ", ".join(f.rule_id for f in others if f.standard != primary.standard),
+            },
+        )
         merged.extend(same_list)
     return merged

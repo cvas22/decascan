@@ -79,7 +79,7 @@ def test_log_file_alone_implies_progress_logging(tmp_path):
 
 def test_log_format_alone_turns_logging_on():
     stderr = run("--log-format", "json", "scan", VULNERABLE, "--no-fail").stderr
-    assert json.loads(stderr.splitlines()[0])["msg"] == "scan started"
+    assert json.loads(stderr.splitlines()[0])["msg"] == "scan requested"
 
 
 def test_environment_variables_configure_logging(tmp_path):

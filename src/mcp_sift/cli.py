@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import platform
 import sys
 from pathlib import Path
 
@@ -148,6 +149,26 @@ def scan_command(
     no_fail: bool,
 ) -> None:
     """Scan a directory (or a single file)."""
+    log = logging_setup.get_logger("cli")
+    log.debug(
+        "environment",
+        extra={
+            "version": __version__,
+            "python": platform.python_version(),
+            "platform": platform.platform(),
+        },
+    )
+    log.info(
+        "scan requested",
+        extra={
+            "path": str(path),
+            "output": output,
+            "output_file": str(output_file) if output_file else "stdout",
+            "fail_on": fail_on,
+            "no_fail": no_fail,
+            "standards": ",".join(standards) or "auto",
+        },
+    )
     config = ScanConfig(
         fail_on=Severity.parse(fail_on),
         min_severity=Severity.parse(min_severity),
@@ -169,29 +190,58 @@ def scan_command(
         _emit(result, output, output_file)
     except (OSError, MemoryError, RecursionError, ValueError, RuntimeError) as exc:
         # Exit 1 means "findings"; a crash must not be mistaken for it by a pipeline.
-        logging_setup.get_logger("cli").exception("scan aborted")
+        log.exception("scan aborted")
         click.echo(f"error: scan aborted: {type(exc).__name__}: {exc}", err=True)
+        log.info("exiting", extra={"code": EXIT_ERROR, "reason": "scan aborted"})
         sys.exit(EXIT_ERROR)
 
     if no_fail:
+        log.info("exiting", extra={"code": EXIT_OK, "reason": "--no-fail"})
         sys.exit(EXIT_OK)
-    sys.exit(EXIT_FINDINGS if result.should_fail(config.fail_on) else EXIT_OK)
+    failing = result.should_fail(config.fail_on)
+    worst = result.worst_severity()
+    log.info(
+        "exiting",
+        extra={
+            "code": EXIT_FINDINGS if failing else EXIT_OK,
+            "reason": (
+                f"finding at or above {fail_on}" if failing
+                else f"nothing at or above {fail_on}" + (f" (worst: {worst.value})" if worst else "")
+            ),
+        },
+    )
+    sys.exit(EXIT_FINDINGS if failing else EXIT_OK)
 
 
 def _emit(result, output: str, output_file: Path | None) -> None:
+    log = logging_setup.get_logger("cli")
+    destination = str(output_file) if output_file else "stdout"
     if output == "pretty":
         if output_file:
             with output_file.open("w", encoding="utf-8") as handle:
                 pretty.render(result, Console(file=handle))
+            size = output_file.stat().st_size
         else:
             pretty.render(result, Console())
-        return
-    renderer = {"json": json_out, "sarif": sarif, "github": github}[output]
-    text = renderer.render(result, __version__)
-    if output_file:
-        output_file.write_text(text, encoding="utf-8")
+            size = None
     else:
-        click.echo(text)
+        renderer = {"json": json_out, "sarif": sarif, "github": github}[output]
+        text = renderer.render(result, __version__)
+        if output_file:
+            output_file.write_text(text, encoding="utf-8")
+            size = output_file.stat().st_size  # what is on disk, which can differ by line endings
+        else:
+            click.echo(text)
+            size = len(text.encode("utf-8"))
+    log.info(
+        "report written",
+        extra={
+            "format": output,
+            "destination": destination,
+            "findings": len(result.findings),
+            **({"bytes": size} if size is not None else {}),
+        },
+    )
 
 
 @main.command("rules")

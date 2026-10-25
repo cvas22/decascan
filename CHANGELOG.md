@@ -18,6 +18,10 @@ All notable changes. The project is pre-release (v0.1); nothing has been publish
   CircleCI. The pipeline runs the unit tests with a coverage floor, and releases are gated on them.
 - **Logging:** `-v`/`-vv`, `--log-file`, `--log-format text|json`, and `MCP_SIFT_*` environment
   variables. Logs go to stderr or a file, never stdout.
+  The log now covers the request, the effective configuration, every file read, manifests,
+  dependency files, which lists were chosen and why, per-rule timings and the slowest rules, what
+  was filtered or merged, the report written, the exit decision, and warnings for slow files and
+  rules.
 - `--repo-root` / `MCP_SIFT_REPO_ROOT`, and `--keep-duplicates`.
 
 ### Changed
