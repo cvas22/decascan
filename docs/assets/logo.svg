@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128" role="img" aria-labelledby="t d">
+  <title id="t">mcp-sift logo</title>
+  <desc id="d">A shield with a sieve of holes, a scan beam crossing it, and one hole flagged red.</desc>
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0b1f3a"/>
+      <stop offset="1" stop-color="#14365e"/>
+    </linearGradient>
+    <linearGradient id="shield" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5eead4"/>
+      <stop offset="1" stop-color="#38bdf8"/>
+    </linearGradient>
+    <linearGradient id="beam" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#fbbf24" stop-opacity="0"/>
+      <stop offset="0.5" stop-color="#fde68a"/>
+      <stop offset="1" stop-color="#fbbf24" stop-opacity="0"/>
+    </linearGradient>
+    <clipPath id="inside">
+      <path d="M64 16 L100 29 V60 C100 85 85 102 64 111 C43 102 28 85 28 60 V29 Z"/>
+    </clipPath>
+  </defs>
+
+  <rect width="128" height="128" rx="28" fill="url(#tile)"/>
+
+  <!-- shield body -->
+  <path d="M64 14 L102 28 V60 C102 86 86 104 64 114 C42 104 26 86 26 60 V28 Z"
+        fill="#0b1f3a" stroke="url(#shield)" stroke-width="5" stroke-linejoin="round"/>
+
+  <g clip-path="url(#inside)">
+    <!-- the sieve: a mesh of holes -->
+    <g fill="#38bdf8" fill-opacity="0.85">
+      <circle cx="48" cy="40" r="4"/><circle cx="64" cy="40" r="4"/><circle cx="80" cy="40" r="4"/>
+      <circle cx="40" cy="54" r="4"/><circle cx="56" cy="54" r="4"/><circle cx="88" cy="54" r="4"/>
+      <circle cx="48" cy="68" r="4"/><circle cx="64" cy="68" r="4"/><circle cx="80" cy="68" r="4"/>
+      <circle cx="56" cy="82" r="4"/><circle cx="72" cy="82" r="4"/>
+      <circle cx="64" cy="96" r="4"/>
+    </g>
+    <!-- one finding, flagged -->
+    <circle cx="72" cy="54" r="4.5" fill="#f87171"/>
+    <circle cx="72" cy="54" r="9" fill="none" stroke="#f87171" stroke-width="2" stroke-opacity="0.9"/>
+    <!-- scan beam -->
+    <rect x="20" y="58" width="88" height="6" fill="url(#beam)" opacity="0.35"/>
+    <rect x="20" y="60" width="88" height="2" fill="url(#beam)"/>
+  </g>
+</svg>

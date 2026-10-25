@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 300" width="1200" height="300" role="img" aria-labelledby="bt bd">
+  <title id="bt">mcp-sift</title>
+  <desc id="bd">mcp-sift: an offline scanner for the OWASP MCP, LLM Applications and web Top 10 lists.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#071426"/>
+      <stop offset="1" stop-color="#12335a"/>
+    </linearGradient>
+    <linearGradient id="name" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#5eead4"/>
+      <stop offset="1" stop-color="#38bdf8"/>
+    </linearGradient>
+    <linearGradient id="shieldStroke" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5eead4"/>
+      <stop offset="1" stop-color="#38bdf8"/>
+    </linearGradient>
+    <linearGradient id="scan" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#fbbf24" stop-opacity="0"/>
+      <stop offset="0.5" stop-color="#fde68a"/>
+      <stop offset="1" stop-color="#fbbf24" stop-opacity="0"/>
+    </linearGradient>
+    <clipPath id="shieldInside">
+      <path d="M64 16 L100 29 V60 C100 85 85 102 64 111 C43 102 28 85 28 60 V29 Z"/>
+    </clipPath>
+    <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M40 0H0V40" fill="none" stroke="#ffffff" stroke-opacity="0.04" stroke-width="1"/>
+    </pattern>
+  </defs>
+
+  <rect width="1200" height="300" rx="24" fill="url(#bg)"/>
+  <rect width="1200" height="300" rx="24" fill="url(#grid)"/>
+
+  <!-- the sieve, falling through the banner -->
+  <g fill="#38bdf8" fill-opacity="0.10">
+    <circle cx="1040" cy="60" r="7"/><circle cx="1090" cy="60" r="7"/><circle cx="1140" cy="60" r="7"/>
+    <circle cx="1015" cy="100" r="7"/><circle cx="1065" cy="100" r="7"/><circle cx="1115" cy="100" r="7"/>
+    <circle cx="1040" cy="140" r="7"/><circle cx="1090" cy="140" r="7"/><circle cx="1140" cy="140" r="7"/>
+    <circle cx="1015" cy="180" r="7"/><circle cx="1065" cy="180" r="7"/><circle cx="1115" cy="180" r="7"/>
+    <circle cx="1040" cy="220" r="7"/><circle cx="1090" cy="220" r="7"/><circle cx="1140" cy="220" r="7"/>
+  </g>
+  <circle cx="1090" cy="140" r="8" fill="#f87171" fill-opacity="0.9"/>
+  <circle cx="1090" cy="140" r="16" fill="none" stroke="#f87171" stroke-opacity="0.7" stroke-width="2"/>
+
+  <!-- logo -->
+  <g transform="translate(70 62) scale(1.5)">
+    <path d="M64 14 L102 28 V60 C102 86 86 104 64 114 C42 104 26 86 26 60 V28 Z"
+          fill="#0b1f3a" stroke="url(#shieldStroke)" stroke-width="5" stroke-linejoin="round"/>
+    <g clip-path="url(#shieldInside)">
+      <g fill="#38bdf8" fill-opacity="0.85">
+        <circle cx="48" cy="40" r="4"/><circle cx="64" cy="40" r="4"/><circle cx="80" cy="40" r="4"/>
+        <circle cx="40" cy="54" r="4"/><circle cx="56" cy="54" r="4"/><circle cx="88" cy="54" r="4"/>
+        <circle cx="48" cy="68" r="4"/><circle cx="64" cy="68" r="4"/><circle cx="80" cy="68" r="4"/>
+        <circle cx="56" cy="82" r="4"/><circle cx="72" cy="82" r="4"/>
+        <circle cx="64" cy="96" r="4"/>
+      </g>
+      <circle cx="72" cy="54" r="4.5" fill="#f87171"/>
+      <circle cx="72" cy="54" r="9" fill="none" stroke="#f87171" stroke-width="2" stroke-opacity="0.9"/>
+      <rect x="20" y="58" width="88" height="6" fill="url(#scan)" opacity="0.35"/>
+      <rect x="20" y="60" width="88" height="2" fill="url(#scan)"/>
+    </g>
+  </g>
+
+  <!-- wordmark -->
+  <g font-family="Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif">
+    <text x="300" y="145" font-size="84" font-weight="800" fill="url(#name)" letter-spacing="-2">mcp-sift</text>
+    <text x="302" y="190" font-size="26" fill="#cbd5e1">Offline OWASP Top 10 scanner for MCP, LLM and web code</text>
+
+    <g font-size="18" font-weight="600">
+      <rect x="302" y="215" width="170" height="38" rx="19" fill="#38bdf8" fill-opacity="0.15" stroke="#38bdf8" stroke-opacity="0.5"/>
+      <text x="387" y="240" text-anchor="middle" fill="#bae6fd">MCP Top 10</text>
+      <rect x="486" y="215" width="226" height="38" rx="19" fill="#5eead4" fill-opacity="0.15" stroke="#5eead4" stroke-opacity="0.5"/>
+      <text x="599" y="240" text-anchor="middle" fill="#99f6e4">LLM Apps Top 10 · 2025</text>
+      <rect x="726" y="215" width="190" height="38" rx="19" fill="#fbbf24" fill-opacity="0.15" stroke="#fbbf24" stroke-opacity="0.5"/>
+      <text x="821" y="240" text-anchor="middle" fill="#fde68a">Web Top 10 · 2021</text>
+    </g>
+  </g>
+</svg>
