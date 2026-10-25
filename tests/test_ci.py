@@ -190,3 +190,10 @@ def test_release_is_gated_on_the_ci_suite():
     assert release["jobs"]["tests"]["uses"] == "./.github/workflows/ci.yml"
     assert release["jobs"]["pypi"]["needs"] == "tests"
     assert "workflow_call" in load(".github/workflows/ci.yml")[True]  # YAML parses `on:` as True
+
+
+def test_source_distribution_excludes_local_tooling_output():
+    pyproject = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
+    section = pyproject[pyproject.index("[tool.hatch.build.targets.sdist]") :]
+    assert "/graphify-out" in section and "/uv.lock" in section
+    assert "graphify-out/" in (ROOT / ".gitignore").read_text(encoding="utf-8")
