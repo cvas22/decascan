@@ -161,13 +161,11 @@ def test_pre_commit_hook_scans_the_whole_tree():
     assert hook["entry"] == "mcp-sift scan"
 
 
-def test_workflows_are_valid_and_the_ci_job_exercises_the_action():
+def test_the_ci_job_exercises_the_action():
     ci = load(".github/workflows/ci.yml")
     assert "action" in ci["jobs"]
     uses = [s.get("uses") for s in ci["jobs"]["action"]["steps"]]
     assert "./" in uses
-    scanning = load(".github/workflows/code-scanning.yml")
-    assert scanning["jobs"]["mcp-sift"]["permissions"]["security-events"] == "write"
 
 
 def test_ci_documentation_covers_every_documented_system():

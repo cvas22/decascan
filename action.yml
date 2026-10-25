@@ -30,8 +30,9 @@ inputs:
     default: mcp-sift.sarif
   upload-sarif:
     description: >-
-      Upload the SARIF report to GitHub code scanning. Needs `security-events: write`, and is not
-      available to pull requests from forks.
+      Upload the SARIF report to GitHub code scanning. Needs `security-events: write` (plus
+      `actions: read` on a private repository, where GitHub Code Security must also be enabled), and
+      is not available to pull requests from forks.
     default: "false"
   annotations:
     description: Also print findings as workflow annotations on the PR and run page.

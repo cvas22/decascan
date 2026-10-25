@@ -28,6 +28,7 @@ on: [push, pull_request]
 permissions:
   contents: read
   security-events: write # only for upload-sarif
+  actions: read          # only for upload-sarif on a private repository
 
 jobs:
   scan:
@@ -47,6 +48,11 @@ Inputs: `path`, `standard`, `fail-on`, `min-severity`, `exclude`, `sarif-file`, 
 
 With no `version`, the action installs the copy bundled with the ref you pinned, so a tag or SHA
 fully determines what runs. Set `version: 0.1.0` to install that release from PyPI instead.
+
+Code scanning on a private repository needs GitHub Code Security (Advanced Security) enabled, and
+`actions: read` as well as `security-events: write`. Without them the upload step fails with
+"Resource not accessible by integration". If you cannot enable it, leave `upload-sarif` off and keep
+the report as an artifact (`actions/upload-artifact` on the `sarif-file` output).
 
 Findings appear as annotations on the changed lines. With `upload-sarif: "true"` they also appear in
 the repository's code scanning alerts, which deduplicate across runs.
