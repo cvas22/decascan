@@ -1,6 +1,6 @@
 name: decascan
 description: >-
-  Offline OWASP Top 10 scan (MCP, LLM applications, web) of Python and TypeScript code. Fails the
+  OWASP Top 10 scan (MCP, LLM applications, web) of Python and TypeScript code. Fails the
   job on findings and can upload SARIF to GitHub code scanning.
 author: cvas22
 branding:

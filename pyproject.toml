@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "decascan"
 version = "0.1.0"
-description = "Offline OWASP Top 10 scanner (MCP, LLM applications, web) for Python and TypeScript"
+description = "OWASP Top 10 scanner (MCP, LLM applications, web) for Python and TypeScript"
 readme = "README.md"
 license = { text = "Apache-2.0" }
 requires-python = ">=3.10"

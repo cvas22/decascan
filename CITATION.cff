@@ -1,8 +1,8 @@
 cff-version: 1.2.0
 message: "If you use DecaScan in academic or technical work, please cite it as below."
-title: "DecaScan: an offline scanner for the OWASP MCP, LLM applications and web Top 10 lists"
+title: "DecaScan: a scanner for the OWASP MCP, LLM applications and web Top 10 lists"
 abstract: >-
-  DecaScan is an offline static scanner that checks source code against three
+  DecaScan is a static scanner that checks source code against three
   OWASP Top 10 lists: the MCP Top 10, the Top 10 for LLM Applications 2025, and
   the web Top 10 2021. It reads manifests, configuration and Python and
   TypeScript/JavaScript source, detects which lists apply to a project, and
