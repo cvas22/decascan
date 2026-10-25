@@ -123,7 +123,7 @@ def test_secret_values_are_redacted_in_snippets(tmp_path):
 
 
 def test_cached_catalog_matches_the_rules_in_code():
-    # Refresh with: mcp-sift standards --export src/mcp_sift/data/top10.json
+    # Refresh with: mcp-sift standards --export src/mcp_sift/data/top10
     from mcp_sift.catalog import build_catalog, load_cached_catalog
 
     assert load_cached_catalog() == build_catalog()

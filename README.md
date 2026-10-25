@@ -241,7 +241,8 @@ Default excludes (always skipped): `.git`, `node_modules`, `__pycache__`, `.venv
 `mcp-sift rules [-s LIST]` lists every built-in rule and the OWASP risk it maps to.
 `mcp-sift standards` shows each Top 10 list and which of its categories have rules. With `--json` it
 prints the catalog; `--json --cached` prints the snapshot shipped in the package
-(`src/mcp_sift/data/top10.json`) without loading any rule, and `--export PATH` rewrites a snapshot.
+(`src/mcp_sift/data/top10/`, one JSON file per list; `-s llm` prints just one) without loading any rule,
+and `--export PATH` rewrites the snapshot.
 See [docs/standards.md](https://github.com/cvas22/mcp-sift/blob/main/docs/standards.md).
 
 ## What it checks
@@ -432,7 +433,7 @@ ids must be unique across lists.
 **Refreshing the cached catalog.** After adding or renaming a rule:
 
 ```bash
-mcp-sift standards --export src/mcp_sift/data/top10.json
+mcp-sift standards --export src/mcp_sift/data/top10
 ```
 
 A test fails when the snapshot and the code disagree.

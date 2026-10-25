@@ -55,20 +55,49 @@ A category is one of three things:
 
 ## The cached catalog
 
-`src/mcp_sift/data/top10.json` is a checked-in, offline snapshot of all of the above: every list,
-version, risk, status and the rules mapped to it. It ships inside the wheel.
+`src/mcp_sift/data/top10/` is a checked-in, offline snapshot of all of the above: every list, version,
+risk, status and the rules mapped to it. It ships inside the wheel, one file per list:
+
+```
+data/top10/
+  mcp.json     OWASP MCP Top 10
+  llm.json     Top 10 for LLM Applications
+  web.json     web Top 10
+```
+
+Each file is self-contained, and there is no index: the lists are the files. One file per list keeps
+diffs small (a new rule touches one list's file), lets a consumer load only the list it needs, and means
+a new list is a new file, not an edit to a shared one.
 
 ```bash
-mcp-sift standards --json            # rebuilt from the code
-mcp-sift standards --json --cached   # the shipped snapshot, no rules loaded
-mcp-sift standards --export src/mcp_sift/data/top10.json   # refresh the snapshot
+mcp-sift standards --json                       # all lists, rebuilt from the code
+mcp-sift standards --json --cached              # all lists, assembled from the shipped files
+mcp-sift standards --json --cached -s llm       # just llm.json
+mcp-sift standards --export src/mcp_sift/data/top10    # refresh the snapshot (one file per list)
+mcp-sift standards --export catalog.json        # one combined file, for tools that expect one
 ```
 
 The snapshot is generated from the code and never edited by hand. A test
 (`test_cached_catalog_matches_the_rules_in_code`) fails when they disagree, so refresh it whenever a
 rule is added, renamed or re-described.
 
-Shape (schema 1):
+A list's file (`llm.json`, schema 1):
+
+```json
+{
+  "schema": 1,
+  "id": "llm",
+  "name": "OWASP Top 10 for LLM Applications",
+  "version": "2025",
+  "risks": [
+    {"id": "LLM05", "name": "Improper Output Handling", "status": "covered",
+     "rules": [{"id": "LLM05-001", "name": "...", "description": "..."}]}
+  ]
+}
+```
+
+`mcp-sift standards --json` (and `--cached`) without `-s` returns the combined shape, kept for
+compatibility:
 
 ```json
 {

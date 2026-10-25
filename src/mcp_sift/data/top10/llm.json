@@ -1,0 +1,120 @@
+{
+  "schema": 1,
+  "id": "llm",
+  "name": "OWASP Top 10 for LLM Applications",
+  "version": "2025",
+  "risks": [
+    {
+      "id": "LLM01",
+      "name": "Prompt Injection",
+      "status": "covered",
+      "rules": [
+        {
+          "id": "LLM01-001",
+          "name": "Variable data interpolated into the system prompt",
+          "description": "A system message is built with an f-string, .format() or concatenation."
+        }
+      ]
+    },
+    {
+      "id": "LLM02",
+      "name": "Sensitive Information Disclosure",
+      "status": "covered",
+      "rules": [
+        {
+          "id": "LLM02-001",
+          "name": "Secret interpolated into a prompt",
+          "description": "An environment variable, key or password is formatted into text sent to the model."
+        }
+      ]
+    },
+    {
+      "id": "LLM03",
+      "name": "Supply Chain",
+      "status": "covered",
+      "rules": [
+        {
+          "id": "LLM03-001",
+          "name": "Model or dataset code executed from a remote repository",
+          "description": "`trust_remote_code=True` runs Python shipped inside the model repository."
+        },
+        {
+          "id": "LLM03-002",
+          "name": "Model weights loaded through pickle",
+          "description": "`torch.load` / `joblib.load` without `weights_only=True` can execute code."
+        },
+        {
+          "id": "LLM03-003",
+          "name": "Model downloaded without a pinned revision",
+          "description": "`from_pretrained` / `hf_hub_download` with no `revision=` follows a moving branch."
+        }
+      ]
+    },
+    {
+      "id": "LLM04",
+      "name": "Data and Model Poisoning",
+      "status": "not-static",
+      "rules": []
+    },
+    {
+      "id": "LLM05",
+      "name": "Improper Output Handling",
+      "status": "covered",
+      "rules": [
+        {
+          "id": "LLM05-001",
+          "name": "Model output reaches a dangerous sink unvalidated",
+          "description": "LLM output is passed to eval/exec, a shell, raw HTML or a SQL string."
+        }
+      ]
+    },
+    {
+      "id": "LLM06",
+      "name": "Excessive Agency",
+      "status": "covered",
+      "rules": [
+        {
+          "id": "LLM06-001",
+          "name": "Agent granted unrestricted code, shell or file capability",
+          "description": "An agent is wired to a shell/REPL tool or an `allow_dangerous_*` switch."
+        }
+      ]
+    },
+    {
+      "id": "LLM07",
+      "name": "System Prompt Leakage",
+      "status": "covered",
+      "rules": [
+        {
+          "id": "LLM07-001",
+          "name": "Credential embedded in a system prompt",
+          "description": "A system prompt contains a key, password or token value."
+        }
+      ]
+    },
+    {
+      "id": "LLM08",
+      "name": "Vector and Embedding Weaknesses",
+      "status": "not-static",
+      "rules": []
+    },
+    {
+      "id": "LLM09",
+      "name": "Misinformation",
+      "status": "not-static",
+      "rules": []
+    },
+    {
+      "id": "LLM10",
+      "name": "Unbounded Consumption",
+      "status": "covered",
+      "rules": [
+        {
+          "id": "LLM10-001",
+          "name": "Model call with no output-token cap",
+          "description": "A completion request sets no `max_tokens` (or equivalent) limit."
+        }
+      ]
+    }
+  ]
+}

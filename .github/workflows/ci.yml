@@ -123,7 +123,8 @@ jobs:
           import glob, zipfile
           wheel = glob.glob("dist/*.whl")[0]
           names = zipfile.ZipFile(wheel).namelist()
-          assert any(n.endswith("mcp_sift/data/top10.json") for n in names), names
+          for name in ("mcp", "llm", "web"):
+              assert any(n.endswith(f"mcp_sift/data/top10/{name}.json") for n in names), (name, names)
           print("ok:", wheel)
           PY
 
@@ -205,7 +206,8 @@ jobs:
           import glob, zipfile
           wheel = glob.glob("dist/*.whl")[0]
           names = zipfile.ZipFile(wheel).namelist()
-          assert any(n.endswith("mcp_sift/data/top10.json") for n in names), names
+          for name in ("mcp", "llm", "web"):
+              assert any(n.endswith(f"mcp_sift/data/top10/{name}.json") for n in names), (name, names)
           print("ok:", wheel)
           PY
 

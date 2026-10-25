@@ -1,0 +1,176 @@
+{
+  "schema": 1,
+  "id": "web",
+  "name": "OWASP Top 10 (Web Application Security Risks)",
+  "version": "2021",
+  "risks": [
+    {
+      "id": "WEB01",
+      "name": "A01 Broken Access Control",
+      "status": "covered",
+      "rules": [
+        {
+          "id": "WEB01-001",
+          "name": "Request-derived value used as a file path",
+          "description": "A request parameter reaches a file open/send call (path traversal)."
+        },
+        {
+          "id": "WEB01-002",
+          "name": "CORS allows every origin together with credentials",
+          "description": "A wildcard origin is combined with credentialed requests."
+        },
+        {
+          "id": "WEB01-003",
+          "name": "CSRF protection disabled",
+          "description": "A view or the whole app opts out of CSRF checks."
+        }
+      ]
+    },
+    {
+      "id": "WEB02",
+      "name": "A02 Cryptographic Failures",
+      "status": "covered",
+      "rules": [
+        {
+          "id": "WEB02-001",
+          "name": "Broken hash algorithm (MD5 / SHA-1)",
+          "description": "MD5 or SHA-1 is used; both are collision-broken and far too fast for passwords."
+        },
+        {
+          "id": "WEB02-002",
+          "name": "TLS certificate verification disabled",
+          "description": "Certificate or hostname checking is turned off for an outbound connection."
+        },
+        {
+          "id": "WEB02-003",
+          "name": "Weak or deprecated cipher",
+          "description": "ECB mode, DES/3DES, RC4 or the deprecated `createCipher` is used."
+        },
+        {
+          "id": "WEB02-004",
+          "name": "Non-cryptographic random for a security value",
+          "description": "`random` / `Math.random` generates something named like a token, key or nonce."
+        }
+      ]
+    },
+    {
+      "id": "WEB03",
+      "name": "A03 Injection",
+      "status": "covered",
+      "rules": [
+        {
+          "id": "WEB03-001",
+          "name": "SQL built by string formatting",
+          "description": "A query is assembled with f-strings, %, .format() or concatenation."
+        },
+        {
+          "id": "WEB03-002",
+          "name": "OS command built from variable data",
+          "description": "A shell command is assembled at runtime or run with shell=True."
+        },
+        {
+          "id": "WEB03-003",
+          "name": "eval/exec on a non-literal",
+          "description": "`eval`, `exec` or `new Function` runs a runtime-built string as code."
+        },
+        {
+          "id": "WEB03-004",
+          "name": "Unescaped output sink (XSS / template injection)",
+          "description": "Variable data is written as raw HTML or into a template string."
+        }
+      ]
+    },
+    {
+      "id": "WEB04",
+      "name": "A04 Insecure Design",
+      "status": "not-static",
+      "rules": []
+    },
+    {
+      "id": "WEB05",
+      "name": "A05 Security Misconfiguration",
+      "status": "covered",
+      "rules": [
+        {
+          "id": "WEB05-001",
+          "name": "Debug mode enabled",
+          "description": "The framework's debugger / debug pages are switched on in code."
+        },
+        {
+          "id": "WEB05-002",
+          "name": "Insecure framework setting",
+          "description": "Wildcard allowed hosts, insecure cookie flags, or XML external entities enabled."
+        }
+      ]
+    },
+    {
+      "id": "WEB06",
+      "name": "A06 Vulnerable and Outdated Components",
+      "status": "not-static",
+      "rules": []
+    },
+    {
+      "id": "WEB07",
+      "name": "A07 Identification and Authentication Failures",
+      "status": "covered",
+      "rules": [
+        {
+          "id": "WEB07-001",
+          "name": "JWT verification weakened or disabled",
+          "description": "Signature, expiry or audience checks are turned off, or the `none` algorithm is allowed."
+        },
+        {
+          "id": "WEB07-002",
+          "name": "Hard-coded application secret or password",
+          "description": "A SECRET_KEY, JWT secret or password is a string literal in source."
+        }
+      ]
+    },
+    {
+      "id": "WEB08",
+      "name": "A08 Software and Data Integrity Failures",
+      "status": "covered",
+      "rules": [
+        {
+          "id": "WEB08-001",
+          "name": "Unsafe deserialization",
+          "description": "pickle/marshal/yaml.load or a similar deserializer is applied to data."
+        },
+        {
+          "id": "WEB08-002",
+          "name": "Remote script piped straight to a shell",
+          "description": "`curl ... | sh` runs unverified code fetched at execution time."
+        }
+      ]
+    },
+    {
+      "id": "WEB09",
+      "name": "A09 Security Logging and Monitoring Failures",
+      "status": "covered",
+      "rules": [
+        {
+          "id": "WEB09-001",
+          "name": "Sensitive value written to the log",
+          "description": "A password, token or key is passed to a logging or print call."
+        },
+        {
+          "id": "WEB09-002",
+          "name": "Exception silently swallowed",
+          "description": "A broad `except: pass` / empty `catch {}` hides failures, including attacks."
+        }
+      ]
+    },
+    {
+      "id": "WEB10",
+      "name": "A10 Server-Side Request Forgery",
+      "status": "covered",
+      "rules": [
+        {
+          "id": "WEB10-001",
+          "name": "Outbound request to a request-supplied URL",
+          "description": "An HTTP client is called with a URL taken from the incoming request (SSRF)."
+        }
+      ]
+    }
+  ]
+}
