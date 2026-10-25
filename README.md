@@ -545,7 +545,7 @@ and `CHANGELOG.md` when behaviour changes. Rules, parsers, the pipeline and the 
 code owners (see [.github/CODEOWNERS](https://github.com/cvas22/decascan/blob/main/.github/CODEOWNERS));
 GitHub asks them for a review automatically.
 
-Using DecaScan? You can be listed in [ADOPTERS.md](https://github.com/cvas22/decascan/blob/main/ADOPTERS.md).
+Using DecaScan in production? [Add your team →](https://github.com/cvas22/decascan/issues/new?title=Adopter%3A+) as an issue, or see [ADOPTERS.md](https://github.com/cvas22/decascan/blob/main/ADOPTERS.md).
 
 ## Status
 
