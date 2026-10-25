@@ -18,8 +18,14 @@ from pathlib import Path
 
 from .common import Dependency, InstallScript
 
-REQUIREMENTS_NAMES = {"requirements.txt", "requirements-dev.txt", "requirements_dev.txt"}
-DEPENDENCY_NAMES = REQUIREMENTS_NAMES | {"pyproject.toml", "package.json"}
+# requirements.txt and the usual variants: requirements-dev.txt, requirements_test.txt, dev-requirements.txt.
+_REQUIREMENTS_FILE = re.compile(r"(?:[\w.]+[-_])?requirements(?:[-_.][\w.-]+)?\.txt", re.IGNORECASE)
+DEPENDENCY_NAMES = {"pyproject.toml", "package.json"}
+
+
+def is_requirements_file(name: str) -> bool:
+    return _REQUIREMENTS_FILE.fullmatch(name) is not None
+
 
 # The presence of any of these means the resolved versions are recorded, so a loose range in the
 # manifest is not actually a floating dependency.
@@ -320,7 +326,7 @@ def _line_of_key(lines: list[str], key: str) -> int:
 
 
 def is_dependency_file(name: str) -> bool:
-    return name in DEPENDENCY_NAMES
+    return name in DEPENDENCY_NAMES or is_requirements_file(name)
 
 
 def is_lockfile(name: str) -> bool:
@@ -338,6 +344,6 @@ def load_dependencies(path: Path, rel: str) -> tuple[list[Dependency], list[Inst
         return _parse_package_json(text, rel)
     if name == "pyproject.toml":
         return _parse_pyproject(text, rel), []
-    if name in REQUIREMENTS_NAMES:
+    if is_requirements_file(name):
         return _parse_requirements(text, rel), []
     return [], []
