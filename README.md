@@ -531,6 +531,8 @@ A test fails when the snapshot and the code disagree.
 
 Maintained by Srinivas Chippagiri ([@cvas22](https://github.com/cvas22)).
 
+See [CONTRIBUTING.md](https://github.com/cvas22/decascan/blob/main/CONTRIBUTING.md) for setup, how to add a rule, and the commit conventions.
+
 Work on a branch and open a pull request against `main`. CI must pass: lint, the unit tests with the
 coverage floor, the fixture scans, and the wheel check. Add tests with the change, and update the docs
 and `CHANGELOG.md` when behaviour changes. Rules, parsers, the pipeline and the release metadata have

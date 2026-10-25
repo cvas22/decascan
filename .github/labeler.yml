@@ -1,0 +1,48 @@
+# Labels applied to a pull request from the paths it changes (see workflows/pr-labeler.yml).
+
+rules:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "src/decascan/rules/**"
+          - "src/decascan/core/standards.py"
+
+parsers:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "src/decascan/parsers/**"
+
+cli:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "src/decascan/cli.py"
+          - "src/decascan/outputs/**"
+
+catalog:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "src/decascan/catalog.py"
+          - "src/decascan/data/**"
+
+tests:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "tests/**"
+
+documentation:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "docs/**"
+          - "README.md"
+          - "CHANGELOG.md"
+
+ci:
+  - changed-files:
+      - any-glob-to-any-file:
+          - ".github/**"
+          - "action.yml"
+          - ".pre-commit-hooks.yaml"
+
+packaging:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "pyproject.toml"

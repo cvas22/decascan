@@ -1,0 +1,29 @@
+name: welcome
+
+on:
+  issues:
+    types: [opened]
+  pull_request_target:
+    types: [opened]
+
+permissions: {}
+
+jobs:
+  welcome:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      issues: write
+      pull-requests: write
+    steps:
+      - uses: actions/first-interaction@1c4688942c71f71d4f5502a26ea67c331730fa4d # v3.1.0
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          issue_message: >
+            Thanks for opening your first issue in DecaScan. A maintainer will look at it soon.
+            To help reproduce a problem, please include the command you ran, the version
+            (`decascan --version`), and, if you can, the smallest file that shows it.
+          pr_message: >
+            Thanks for your first pull request to DecaScan. See CONTRIBUTING.md, and make sure `pytest` and
+            `ruff check .` pass and that behaviour changes are in the CHANGELOG. A maintainer
+            will review it shortly.

@@ -1,0 +1,48 @@
+name: self-scan
+
+# DecaScan scanning its own source with the GitHub Action in this repository. A finding at or above
+# `fail-on` fails the check, and shows as an annotation on the changed lines.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: self-scan-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  decascan:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      actions: read # upload-sarif reads the workflow run
+      security-events: write # upload-sarif, when it is switched on below
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - id: scan
+        uses: ./
+        with:
+          path: src
+          # The rule tables contain the very patterns they detect; scanning them is all noise.
+          exclude: rules
+          fail-on: high
+          # Alerts in the Security tab need a public repository (or Code Security), and a token that can
+          # write them, which a pull request from a fork does not have. Until then the report is kept
+          # as an artifact below.
+          upload-sarif: ${{ github.event_name == 'push' && github.event.repository.private == false }}
+
+      - name: keep the SARIF report
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: decascan-sarif
+          path: ${{ steps.scan.outputs.sarif-file }}
+          if-no-files-found: ignore
