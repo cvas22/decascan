@@ -10,8 +10,9 @@ All notable changes. The project is pre-release (v0.1); nothing has been publish
   can establish are reported as "not static" by `mcp-sift standards`.
 - **`--standard auto|all|mcp|llm|web`.** `auto` (the default) picks the lists from the code's imports
   and dependencies and says why; an unrecognised codebase gets every list.
-- **Cached catalog** of the lists and their rules, `src/mcp_sift/data/top10.json`
-  (`standards --json --cached`, `--export`), kept in step with the code by a test.
+- **Cached catalog** of the lists and their rules, one JSON file per list in
+  `src/mcp_sift/data/top10/` (`standards --json --cached [-s LIST]`, `--export`), kept in step with the
+  code by a test.
 - **CI/CD:** a composite GitHub Action (`action.yml`), `-o github` annotations, a pre-commit hook,
   a code-scanning workflow, and `docs/ci.md` with recipes for GitLab, Jenkins, Azure Pipelines and
   CircleCI. The pipeline runs the unit tests with a coverage floor, and releases are gated on them.

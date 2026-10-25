@@ -10,7 +10,7 @@ import click
 from rich.console import Console
 
 from . import __version__
-from .catalog import build_catalog, export_catalog, load_cached_catalog
+from .catalog import build_catalog, export_catalog, load_cached_catalog, load_cached_standard
 from .core import log as logging_setup
 from .core.config import ScanConfig
 from .core.findings import Severity
@@ -223,24 +223,40 @@ def rules_command(standard: str | None) -> None:
     help="With --json: print the snapshot shipped in the package rather than rebuilding it.",
 )
 @click.option(
+    "--standard",
+    "-s",
+    "only",
+    type=click.Choice(sorted(STANDARDS)),
+    help="Only this list (with --json: just that list's file from the snapshot).",
+)
+@click.option(
     "--export",
     "export_path",
     type=click.Path(path_type=Path),
-    help="Write the catalog snapshot to this file (used to refresh data/top10.json).",
+    help=(
+        "Write the snapshot: a directory gets index.json plus one file per list (used to refresh "
+        "src/mcp_sift/data/top10/); a path ending in .json gets one combined file."
+    ),
 )
-def standards_command(as_json: bool, cached: bool, export_path: Path | None) -> None:
+def standards_command(as_json: bool, cached: bool, only: str | None, export_path: Path | None) -> None:
     """Show each Top 10 list and which of its categories have rules."""
     if export_path:
-        export_catalog(export_path)
-        click.echo(f"wrote {export_path}")
+        for written in export_catalog(export_path):
+            click.echo(f"wrote {written}")
         return
     if as_json:
-        click.echo(json.dumps(load_cached_catalog() if cached else build_catalog(), indent=2))
+        if only:
+            body = load_cached_standard(only) if cached else build_catalog()["standards"][only]
+        else:
+            body = load_cached_catalog() if cached else build_catalog()
+        click.echo(json.dumps(body, indent=2))
         return
 
     console = Console()
     catalog = build_catalog()
     for standard in STANDARDS.values():
+        if only and standard.id != only:
+            continue
         console.print(f"\n[bold]{standard.name}[/bold] [dim]({standard.id}, {standard.version})[/dim]")
         for risk in catalog["standards"][standard.id]["risks"]:
             if risk["status"] == "covered":
