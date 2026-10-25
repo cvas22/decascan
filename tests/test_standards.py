@@ -137,3 +137,62 @@ def test_every_rule_is_documented():
     docs = (Path(__file__).parent.parent / "docs" / "rules.md").read_text(encoding="utf-8")
     missing = [r.id for r in all_rules() if f"### {r.id}" not in docs]
     assert missing == []
+
+
+def detected(tmp_path: Path, source: str, name: str = "app.py") -> dict[str, list[str]]:
+    (tmp_path / name).write_text(source, encoding="utf-8")
+    return scan(tmp_path).detected
+
+
+def test_auto_detects_the_lists_a_codebase_uses(tmp_path):
+    found = detected(tmp_path, "from flask import Flask\nimport openai\n")
+    assert set(found) == {"web", "llm"}
+    assert "imports flask" in found["web"]
+
+
+def test_auto_runs_only_the_detected_lists(tmp_path):
+    (tmp_path / "app.py").write_text("from flask import Flask\nDEBUG = True\n", encoding="utf-8")
+    ids = rule_ids(tmp_path)
+    assert "WEB05-001" in ids and not any(i.startswith("LLM") for i in ids)
+    assert scan(tmp_path).standards == ("web",)
+
+
+def test_auto_detects_mcp_servers(tmp_path):
+    found = detected(tmp_path, "from mcp.server.fastmcp import FastMCP\nmcp = FastMCP('x')\n")
+    assert "mcp" in found
+
+
+def test_auto_reads_declared_dependencies(tmp_path):
+    (tmp_path / "package.json").write_text('{"dependencies": {"express": "4.19.2"}}', encoding="utf-8")
+    (tmp_path / "index.js").write_text("console.log('hi')\n", encoding="utf-8")
+    assert "web" in scan(tmp_path).detected
+
+
+def test_auto_falls_back_to_every_list_when_nothing_is_recognised(tmp_path):
+    (tmp_path / "script.py").write_text("print('hello')\n", encoding="utf-8")
+    result = scan(tmp_path)
+    assert result.detected == {}
+    assert set(result.standards) == set(STANDARDS)
+
+
+def test_a_local_module_named_like_a_common_word_does_not_select_a_list(tmp_path):
+    assert detected(tmp_path, "import ai\nfrom next import thing\n") == {}
+
+
+def test_explicit_standard_overrides_detection(tmp_path):
+    (tmp_path / "app.py").write_text("from flask import Flask\n", encoding="utf-8")
+    result = scan(tmp_path, ScanConfig(standards=frozenset({"llm"})))
+    assert result.standards == ("llm",) and result.detected == {}
+
+
+def test_cli_all_runs_every_list_and_auto_cannot_be_mixed():
+    runner = CliRunner()
+    out = runner.invoke(main, ["scan", str(CLEAN), "-s", "all", "-o", "json", "--no-fail"]).output
+    assert set(json.loads(out)["standards"]) == set(STANDARDS)
+    bad = runner.invoke(main, ["scan", str(CLEAN), "-s", "auto", "-s", "web"])
+    assert bad.exit_code == 2 and "cannot be combined" in bad.output
+
+
+def test_pretty_output_says_what_was_auto_detected():
+    out = CliRunner().invoke(main, ["scan", str(VULNERABLE), "--no-fail"]).output
+    assert "Auto-detected:" in out and "Override with --standard" in out

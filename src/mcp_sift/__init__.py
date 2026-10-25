@@ -1,4 +1,4 @@
-"""mcp-sift — an OWASP MCP Top 10 security scanner for Model Context Protocol servers."""
+"""mcp-sift — an offline scanner for the OWASP MCP, LLM Applications and web Top 10 lists."""
 
 __version__ = "0.1.0"
 

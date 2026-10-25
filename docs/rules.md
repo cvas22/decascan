@@ -1,7 +1,7 @@
 # Rules
 
-The first part covers the OWASP MCP Top 10 (v0.1); the LLM Applications and web Top 10 rules follow.
-Every rule maps to a risk in one of the lists and carries a CWE id and a confidence
+The first part covers the OWASP MCP Top 10 (v0.1); the Top 10 for LLM Applications (2025) and the web
+Top 10 (2021) follow. Every rule maps to a risk in exactly one of the lists and carries a CWE id and a confidence
 score. Confidence below 1.0 means the rule matches a *pattern* that is usually a vulnerability, not
 a proof of one — read the finding before you act on it.
 

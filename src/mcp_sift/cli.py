@@ -31,6 +31,17 @@ def main() -> None:
     """Scan source against the OWASP Top 10 lists: MCP, LLM applications and web."""
 
 
+def _resolve_standards(chosen: tuple[str, ...]) -> frozenset[str] | None:
+    """None means auto-detect; otherwise the explicit set of lists."""
+    if not chosen or chosen == ("auto",):
+        return None
+    if "auto" in chosen:
+        raise click.BadParameter("`auto` cannot be combined with other lists", param_hint="--standard")
+    if "all" in chosen:
+        return frozenset(STANDARDS)
+    return frozenset(chosen)
+
+
 @main.command("scan")
 @click.argument("path", type=click.Path(exists=True, path_type=Path))
 @click.option(
@@ -63,8 +74,11 @@ def main() -> None:
     "-s",
     "standards",
     multiple=True,
-    type=click.Choice(sorted(STANDARDS)),
-    help="Top 10 list(s) to scan against (repeatable). [default: all]",
+    type=click.Choice(["auto", "all", *sorted(STANDARDS)]),
+    help=(
+        "Top 10 list(s) to scan against (repeatable). `auto` picks the lists that apply from the "
+        "code's imports and dependencies; `all` runs every list. [default: auto]"
+    ),
 )
 @click.option("--rule", "rules", multiple=True, help="Run only these rule ids (repeatable).")
 @click.option("--disable", "disabled", multiple=True, help="Skip these rule ids (repeatable).")
@@ -91,7 +105,7 @@ def scan_command(
     config = ScanConfig(
         fail_on=Severity.parse(fail_on),
         min_severity=Severity.parse(min_severity),
-        standards=frozenset(standards) if standards else None,
+        standards=_resolve_standards(standards),
         enabled_rules=frozenset(rules) if rules else None,
         disabled_rules=frozenset(disabled),
     )

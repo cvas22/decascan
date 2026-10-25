@@ -13,6 +13,7 @@ def to_dict(result: ScanResult, version: str = "0.1.0") -> dict:
         "tool": "mcp-sift",
         "version": version,
         "standards": {sid: STANDARDS[sid].version for sid in result.standards},
+        "standards_detected": result.detected,
         "owasp_mcp_top10_version": STANDARDS["mcp"].version,
         "summary": {
             "files_scanned": result.files_scanned,

@@ -5,12 +5,12 @@ build-backend = "hatchling.build"
 [project]
 name = "mcp-sift"
 version = "0.1.0"
-description = "OWASP MCP Top 10 security scanner for Model Context Protocol servers"
+description = "Offline OWASP Top 10 scanner (MCP, LLM applications, web) for Python and TypeScript"
 readme = "README.md"
 license = { text = "Apache-2.0" }
 requires-python = ">=3.10"
 authors = [{ name = "Srinivas Chippagiri" }]
-keywords = ["mcp", "security", "owasp", "sast", "model-context-protocol"]
+keywords = ["mcp", "security", "owasp", "sast", "model-context-protocol", "llm", "owasp-top-10"]
 classifiers = [
   "Development Status :: 3 - Alpha",
   "Environment :: Console",
