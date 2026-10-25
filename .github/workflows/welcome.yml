@@ -10,6 +10,10 @@ permissions: {}
 
 jobs:
   welcome:
+    # GitHub labels the author's relationship to the repository; greet only people new to it.
+    if: >-
+      contains(fromJSON('["FIRST_TIMER","FIRST_TIME_CONTRIBUTOR"]'),
+        github.event.pull_request.author_association || github.event.issue.author_association)
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:
