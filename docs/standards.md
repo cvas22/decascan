@@ -25,6 +25,22 @@ imports. If nothing is recognised every list runs, since silently checking nothi
 checking too much. Use `-s mcp|llm|web` (repeatable) or `-s all` to choose yourself; `auto` cannot
 be mixed with explicit lists. Detection lives in `core/detect.py`.
 
+## How findings from several lists combine
+
+A defect is often a risk in more than one list: shell injection is MCP05, WEB03 and, for model output,
+LLM05. When a scan covers several lists, findings on the same file, line and CWE are merged into the
+strongest one (highest severity, then confidence, then the MCP list), and the others are recorded as
+`also_maps_to`, so every list keeps its mapping without the defect being counted twice. Two different
+defects on one line, and several findings from one list, are never merged. `--keep-duplicates` reports
+each list separately.
+
+## What the pattern rules read
+
+The LLM and web rules read source text with comments and docstring-style statements blanked, so an
+example in a docstring is not a finding; line numbers do not change. Strings that are values (SQL,
+prompts, URLs) are read. Test directories are skipped, as are files with a line over 5,000 characters
+(minified or generated output). The MCP rules work from the parsed AST and manifests instead.
+
 ## Coverage and what is deliberately missing
 
 A category is one of three things:
