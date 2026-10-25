@@ -184,7 +184,7 @@ def weak_hash(ctx: ScanContext) -> Iterable[Finding]:
 
 
 _TLS_OFF = re.compile(
-    r"\bverify\s*=\s*False\b|\brejectUnauthorized\s*:\s*false\b|NODE_TLS_REJECT_UNAUTHORIZED[^\n]*[\"']?0|"
+    r"\bverify\s*=\s*False\b|\brejectUnauthorized\s*:\s*false\b|NODE_TLS_REJECT_UNAUTHORIZED[^\n]{0,400}[\"']?0|"
     r"\b_create_unverified_context\b|\bssl\.CERT_NONE\b|\bInsecureSkipVerify\b|\bcheck_hostname\s*=\s*False\b"
 )
 
@@ -472,7 +472,7 @@ def xss(ctx: ScanContext) -> Iterable[Finding]:
 
 # --- A05 Security Misconfiguration -------------------------------------------------------------
 
-_DEBUG_ON = re.compile(r"\.run\([^)\n]*debug\s*=\s*True|^\s*DEBUG\s*=\s*True\b|\bFLASK_DEBUG\s*=\s*[\"']?1", re.M)
+_DEBUG_ON = re.compile(r"\.run\([^)\n]{0,300}debug\s*=\s*True|^\s*DEBUG\s*=\s*True\b|\bFLASK_DEBUG\s*=\s*[\"']?1", re.M)
 _DEV_FILE = re.compile(r"dev|local|example|sample|test|debug", re.I)
 
 
@@ -514,7 +514,7 @@ _COOKIE_FLAGS_OFF = re.compile(
     r"\b(?:httpOnly|secure)\s*:\s*false\b|\bsamesite\s*=\s*[\"']None[\"']",
     re.I,
 )
-_XXE = re.compile(r"\bresolve_entities\s*=\s*True\b|\bXMLParser\([^)\n]*no_network\s*=\s*False")
+_XXE = re.compile(r"\bresolve_entities\s*=\s*True\b|\bXMLParser\([^)\n]{0,300}no_network\s*=\s*False")
 
 
 @rule(
@@ -558,7 +558,7 @@ def insecure_settings(ctx: ScanContext) -> Iterable[Finding]:
 
 _JWT_UNSAFE = re.compile(
     r"[\"']verify_signature[\"']\s*:\s*False|algorithms\s*=\s*\[\s*[\"']none[\"']|\bignoreExpiration\s*:\s*true\b|"
-    r"\bverify_(?:exp|aud)[\"']\s*:\s*False|jwt\.decode\([^)\n]*verify\s*=\s*False",
+    r"\bverify_(?:exp|aud)[\"']\s*:\s*False|jwt\.decode\([^)\n]{0,300}verify\s*=\s*False",
     re.I,
 )
 
@@ -726,8 +726,8 @@ _LOG_CALL = re.compile(
 )
 _SENSITIVE = r"(?:password|passwd|secret|api_?key|authorization|access_?token|refresh_?token|private_?key|ssn|card_?number|cvv)"
 _SENSITIVE_IN_LOG = re.compile(
-    rf"\{{[^}}\n]*{_SENSITIVE}[^}}\n]*\}}|\$\{{[^}}\n]*{_SENSITIVE}[^}}\n]*\}}|,\s*[\w.\[\]\"']*{_SENSITIVE}\w*\s*(?:[,)]|$)|"
-    rf"%\s*\(?[^)\n]*{_SENSITIVE}|\+\s*[\w.]*{_SENSITIVE}|,\s*(?:token|jwt|bearer)\s*(?:[,)]|$)",
+    rf"\{{[^}}\n]{{0,200}}{_SENSITIVE}[^}}\n]{{0,200}}\}}|\$\{{[^}}\n]{{0,200}}{_SENSITIVE}[^}}\n]{{0,200}}\}}|,\s*[\w.\[\]\"']*{_SENSITIVE}\w*\s*(?:[,)]|$)|"
+    rf"%\s*\(?[^)\n]{{0,300}}{_SENSITIVE}|\+\s*[\w.]*{_SENSITIVE}|,\s*(?:token|jwt|bearer)\s*(?:[,)]|$)",
     re.I,
 )
 

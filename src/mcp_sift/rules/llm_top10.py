@@ -26,7 +26,7 @@ from ._scan import (
 from .base import rule
 
 _USER_HINT = re.compile(r"user|input|query|request|message|question|text|prompt|body|param", re.I)
-_INTERPOLATION = re.compile(r"\$?\{([^{}\n]*)\}|\.format\(([^)\n]*)\)|\+\s*([\w.\[\]]+)")
+_INTERPOLATION = re.compile(r"\$?\{([^{}\n]*)\}|\.format\(([^)\n]{0,300})\)|\+\s*([\w.\[\]]+)")
 
 
 def _interpolated(segment: str) -> str:
@@ -38,10 +38,10 @@ def _interpolated(segment: str) -> str:
 # A "system" message whose content is assembled at runtime. The system role is the trusted channel;
 # splicing anything variable into it lets that data speak with the operator's authority.
 _SYSTEM_DYNAMIC = (
-    re.compile(r"[\"']role[\"']\s*:\s*[\"']system[\"']\s*,\s*[\"']content[\"']\s*:\s*(f[\"']|[^\n]*\.format\(|[^\n]*[\"']\s*\+\s*\w)"),
+    re.compile(r"[\"']role[\"']\s*:\s*[\"']system[\"']\s*,\s*[\"']content[\"']\s*:\s*(f[\"']|[^\n]{0,400}\.format\(|[^\n]{0,400}[\"']\s*\+\s*\w)"),
     re.compile(r"\brole\s*:\s*[\"'`]system[\"'`]\s*,\s*content\s*:\s*`[^`]*\$\{"),
     re.compile(r"\bSystemMessage\(\s*(?:content\s*=\s*)?(f[\"']|[^\n)]*\.format\()"),
-    re.compile(r"\bsystem\s*=\s*(f[\"'][^\n]*\{|[^\n]*\.format\()"),
+    re.compile(r"\bsystem\s*=\s*(f[\"'][^\n]{0,400}\{|[^\n]{0,400}\.format\()"),
 )
 
 
@@ -85,8 +85,8 @@ def dynamic_system_prompt(ctx: ScanContext) -> Iterable[Finding]:
 # --- LLM02 -------------------------------------------------------------------------------------
 
 _SECRET_IN_PROMPT = re.compile(
-    r"f[\"'][^\n\"']*\{[^}\n]*(?:os\.environ|getenv|api_?key|secret|password|passwd|private_key)[^}\n]*\}|"
-    r"`[^`\n]*\$\{[^}\n]*(?:process\.env|apiKey|secret|password)[^}\n]*\}",
+    r"f[\"'][^\n\"']*\{[^}\n]{0,200}(?:os\.environ|getenv|api_?key|secret|password|passwd|private_key)[^}\n]{0,200}\}|"
+    r"`[^`\n]*\$\{[^}\n]{0,200}(?:process\.env|apiKey|secret|password)[^}\n]{0,200}\}",
     re.I,
 )
 _PROMPT_CONTEXT = re.compile(r"prompt|system|messages?|content|instruction", re.I)
@@ -243,11 +243,11 @@ _MODEL_OUTPUT = (
     r"ai_?(?:reply|response|message)|chat_?(?:response|completion)|answer|\.choices\b|\.output_text\b)"
 )
 _OUTPUT_SINKS = (
-    (re.compile(rf"(?<![.\w])(?:eval|exec)\([^\n]*{_MODEL_OUTPUT}", re.I), "evaluated as code", Severity.CRITICAL, "CWE-95"),
-    (re.compile(rf"\bos\.system\([^\n]*{_MODEL_OUTPUT}|\bsubprocess\.\w+\([^\n]*{_MODEL_OUTPUT}", re.I), "run as a shell command", Severity.CRITICAL, "CWE-78"),
-    (re.compile(rf"\b(?:execSync|exec|spawn)\([^\n]*{_MODEL_OUTPUT}", re.I), "run as a shell command", Severity.CRITICAL, "CWE-78"),
-    (re.compile(rf"\b(?:innerHTML|outerHTML)\s*=[^\n]*{_MODEL_OUTPUT}|dangerouslySetInnerHTML[^\n]*{_MODEL_OUTPUT}", re.I), "rendered as raw HTML", Severity.HIGH, "CWE-79"),
-    (re.compile(rf"\.(?:execute|executemany|query)\(\s*(?:f[\"']|`)[^\n]*{_MODEL_OUTPUT}", re.I), "spliced into a SQL statement", Severity.HIGH, "CWE-89"),
+    (re.compile(rf"(?<![.\w])(?:eval|exec)\([^\n]{{0,400}}{_MODEL_OUTPUT}", re.I), "evaluated as code", Severity.CRITICAL, "CWE-95"),
+    (re.compile(rf"\bos\.system\([^\n]{{0,400}}{_MODEL_OUTPUT}|\bsubprocess\.\w+\([^\n]{{0,400}}{_MODEL_OUTPUT}", re.I), "run as a shell command", Severity.CRITICAL, "CWE-78"),
+    (re.compile(rf"\b(?:execSync|exec|spawn)\([^\n]{{0,400}}{_MODEL_OUTPUT}", re.I), "run as a shell command", Severity.CRITICAL, "CWE-78"),
+    (re.compile(rf"\b(?:innerHTML|outerHTML)\s*=[^\n]{{0,400}}{_MODEL_OUTPUT}|dangerouslySetInnerHTML[^\n]{{0,400}}{_MODEL_OUTPUT}", re.I), "rendered as raw HTML", Severity.HIGH, "CWE-79"),
+    (re.compile(rf"\.(?:execute|executemany|query)\(\s*(?:f[\"']|`)[^\n]{{0,400}}{_MODEL_OUTPUT}", re.I), "spliced into a SQL statement", Severity.HIGH, "CWE-89"),
 )
 
 

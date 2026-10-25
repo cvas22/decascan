@@ -16,6 +16,10 @@ from ..parsers.js_source import parse_javascript
 from ..parsers.manifest import Manifest, is_manifest_name, load_manifest
 from ..parsers.python_source import parse_python
 from .config import SOURCE_SUFFIXES, TEXT_SUFFIXES, ScanConfig
+from .lines import line_text
+from .log import get_logger
+
+log = get_logger("context")
 
 
 @dataclass
@@ -56,8 +60,7 @@ class ScanContext:
         return self._text_cache[rel_path]
 
     def line(self, rel_path: str, line_no: int) -> str:
-        lines = self.text(rel_path).splitlines()
-        return lines[line_no - 1] if 0 < line_no <= len(lines) else ""
+        return line_text(self.text(rel_path), line_no)
 
     @cached_property
     def code_tools(self) -> list[ToolDef]:
@@ -108,13 +111,22 @@ def build_context(root: Path, config: ScanConfig) -> ScanContext:
     else:
         candidates = [p for p in root.rglob("*") if p.is_file()]
 
+    counts = {"excluded": 0, "too_large": 0, "unreadable": 0, "not_scannable": 0}
     for path in sorted(candidates):
         if _is_excluded(path, root, config.excludes):
+            counts["excluded"] += 1
             continue
         try:
             if path.stat().st_size > config.max_file_bytes:
+                counts["too_large"] += 1
+                log.debug(
+                    "file skipped: over size limit",
+                    extra={"file": str(path), "limit": config.max_file_bytes},
+                )
                 continue
         except OSError:
+            counts["unreadable"] += 1
+            log.debug("file skipped: cannot stat", extra={"file": str(path)})
             continue
 
         suffix = path.suffix.lower()
@@ -129,6 +141,7 @@ def build_context(root: Path, config: ScanConfig) -> ScanContext:
             and not is_env
             and not is_deps
         ):
+            counts["not_scannable"] += 1
             continue
 
         rel = path.relative_to(root).as_posix()
@@ -152,4 +165,14 @@ def build_context(root: Path, config: ScanConfig) -> ScanContext:
         elif suffix in (".ts", ".tsx", ".js", ".jsx", ".mjs", ".mts", ".cjs"):
             ctx.source_facts[rel] = parse_javascript(rel, ctx.text(rel))
 
+    log.info(
+        "context built",
+        extra={
+            "files": len(ctx.files),
+            "manifests": len(ctx.manifests),
+            "tools": len(ctx.all_tools),
+            "dependencies": len(ctx.dependencies),
+            **{f"skipped_{k}": v for k, v in counts.items()},
+        },
+    )
     return ctx

@@ -11,7 +11,10 @@ from .config import ScanConfig
 from .context import ScanContext, build_context
 from .detect import detect_standards
 from .findings import Finding, Severity
+from .log import get_logger
 from .standards import STANDARDS
+
+log = get_logger("scanner")
 
 SUPPRESSION_MARKERS = ("mcp-sift:ignore", "mcp-sift: ignore", "nosec mcp-sift")
 
@@ -66,21 +69,45 @@ def scan(root: Path, config: ScanConfig | None = None) -> ScanResult:
     config = config or ScanConfig()
     started = time.perf_counter()
 
+    log.info("scan started", extra={"path": str(root)})
     ctx = build_context(root, config)
     findings: list[Finding] = []
     errors: list[str] = []
     active, detected = active_standards(ctx)
     rules = [r for r in all_rules() if r.standard in active and config.rule_enabled(r.id)]
+    log.info(
+        "lists selected",
+        extra={
+            "standards": ",".join(sorted(active)),
+            "mode": "auto" if config.standards is None else "explicit",
+            "detected": "; ".join(f"{sid}: {', '.join(why)}" for sid, why in sorted(detected.items())),
+            "rules": len(rules),
+        },
+    )
 
     for rule in rules:
+        rule_started = time.perf_counter()
         try:
-            findings.extend(rule.fn(ctx))
+            produced = list(rule.fn(ctx))
         except Exception as exc:  # a broken rule must not take the whole scan down
             errors.append(f"rule {rule.id} raised {type(exc).__name__}: {exc}")
+            log.warning("rule failed", extra={"rule": rule.id, "error": f"{type(exc).__name__}: {exc}"})
+            log.debug("rule failure traceback", exc_info=True, extra={"rule": rule.id})
+            continue
+        findings.extend(produced)
+        log.debug(
+            "rule finished",
+            extra={
+                "rule": rule.id,
+                "findings": len(produced),
+                "ms": round((time.perf_counter() - rule_started) * 1000, 1),
+            },
+        )
 
     for facts in ctx.source_facts.values():
         if facts.parse_error:
             errors.append(f"{facts.path}: {facts.parse_error}")
+            log.warning("file could not be parsed", extra={"file": facts.path, "error": facts.parse_error})
 
     kept: list[Finding] = []
     seen: set[tuple] = set()
@@ -88,6 +115,10 @@ def scan(root: Path, config: ScanConfig | None = None) -> ScanResult:
         if finding.severity.rank < config.min_severity.rank:
             continue
         if _is_suppressed(ctx, finding):
+            log.debug(
+                "finding suppressed inline",
+                extra={"rule": finding.rule_id, "file": finding.file_path, "line": finding.line},
+            )
             continue
         key = (finding.rule_id, finding.file_path, finding.line, finding.title)
         if key in seen:
@@ -96,12 +127,23 @@ def scan(root: Path, config: ScanConfig | None = None) -> ScanResult:
         kept.append(finding)
 
     kept.sort(key=lambda f: f.sort_key)
+    duration = time.perf_counter() - started
+    log.info(
+        "scan finished",
+        extra={
+            "files": len(ctx.files),
+            "rules": len(rules),
+            "findings": len(kept),
+            "errors": len(errors),
+            "seconds": round(duration, 3),
+        },
+    )
 
     return ScanResult(
         findings=kept,
         files_scanned=len(ctx.files),
         rules_run=len(rules),
-        duration_seconds=time.perf_counter() - started,
+        duration_seconds=duration,
         errors=errors,
         standards=tuple(sorted(active)),
         detected=detected,

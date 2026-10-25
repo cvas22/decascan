@@ -11,6 +11,7 @@ from rich.console import Console
 
 from . import __version__
 from .catalog import build_catalog, export_catalog, load_cached_catalog
+from .core import log as logging_setup
 from .core.config import ScanConfig
 from .core.findings import Severity
 from .core.scanner import scan
@@ -27,8 +28,37 @@ EXIT_ERROR = 2
 
 @click.group(context_settings={"help_option_names": ["-h", "--help"]})
 @click.version_option(__version__, prog_name="mcp-sift")
-def main() -> None:
+@click.option(
+    "-v",
+    "--verbose",
+    count=True,
+    envvar="MCP_SIFT_VERBOSE",
+    help="Log diagnostics to stderr: -v for progress, -vv for per-rule timings and skipped files.",
+)
+@click.option(
+    "--log-file",
+    type=click.Path(path_type=Path),
+    envvar="MCP_SIFT_LOG_FILE",
+    help="Write the log to this file instead of stderr (implies -v when no -v is given).",
+)
+@click.option(
+    "--log-format",
+    type=click.Choice(list(logging_setup.FORMATS)),
+    default="text",
+    envvar="MCP_SIFT_LOG_FORMAT",
+    show_default=True,
+    help="`json` writes one JSON object per line. The report itself is unaffected.",
+)
+@click.pass_context
+def main(ctx: click.Context, verbose: int, log_file: Path | None, log_format: str) -> None:
     """Scan source against the OWASP Top 10 lists: MCP, LLM applications and web."""
+    # Logging is opt-in so a plain run prints only the report. Asking for a file or a format
+    # without -v still has to produce a log, at progress level.
+    explicit = verbose > 0 or log_file is not None or ctx.get_parameter_source("log_format").name != "DEFAULT"
+    if explicit:
+        logging_setup.configure(verbose or 1, log_file, log_format)
+    else:
+        logging_setup.disable()
 
 
 def _resolve_standards(chosen: tuple[str, ...]) -> frozenset[str] | None:
