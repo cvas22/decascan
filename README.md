@@ -32,6 +32,10 @@ around the server for the LLM and web risks in the same pass.
 
 No API key. No network calls. No account. `decascan scan .` and you have your answer.
 
+Created and led by Srinivas Chippagiri ([@cvas22](https://github.com/cvas22)): DecaScan, a scanner for the OWASP MCP, LLM Applications and web Top 10 lists.
+
+⭐ If DecaScan helps you check your code against the OWASP Top 10, star the repo. Stars are how other teams find it.
+
 ## Example run
 
 A real scan of `tests/fixtures/vulnerable_ts` — a 30-line TypeScript MCP server. Fifteen findings in
