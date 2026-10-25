@@ -1,0 +1,25 @@
+# Maintainer: Srinivas Chippagiri (@cvas22).
+#
+# Who reviews what. GitHub requests a review from the matching owner on every pull request; to make
+# that review mandatory, enable "Require review from Code Owners" in the branch protection rule for
+# `main`. The last matching pattern wins, so the specific paths below override the default.
+
+# Everything, by default.
+*                           @cvas22
+
+# The pipeline, the GitHub Action and the pre-commit hook. A change here can publish a release,
+# change what runs with repository secrets, or change what other repositories execute.
+/.github/                   @cvas22
+/action.yml                 @cvas22
+/.pre-commit-hooks.yaml     @cvas22
+
+# What the scanner detects, and the files generated from it.
+/src/mcp_sift/rules/        @cvas22
+/src/mcp_sift/parsers/      @cvas22
+/src/mcp_sift/core/standards.py  @cvas22
+/src/mcp_sift/data/         @cvas22
+/docs/rules.md              @cvas22
+
+# Packaging and release metadata.
+/pyproject.toml             @cvas22
+/CHANGELOG.md               @cvas22
