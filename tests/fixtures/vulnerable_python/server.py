@@ -1,4 +1,4 @@
-"""Intentionally vulnerable MCP server. Fixture for mcp-sift tests — do not deploy."""
+"""Intentionally vulnerable MCP server. Fixture for decascan tests — do not deploy."""
 
 import subprocess
 from pathlib import Path

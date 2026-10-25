@@ -6,9 +6,9 @@ from pathlib import Path
 
 import pytest
 
-from mcp_sift.core.config import ScanConfig
-from mcp_sift.core.scanner import scan
-from mcp_sift.parsers.dependencies import (
+from decascan.core.config import ScanConfig
+from decascan.core.scanner import scan
+from decascan.parsers.dependencies import (
     _is_pinned_npm,
     _is_pinned_pypi,
     _name_from_direct_reference,

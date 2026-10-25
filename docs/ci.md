@@ -1,6 +1,6 @@
-# Running mcp-sift in CI/CD
+# Running decascan in CI/CD
 
-`mcp-sift` is offline, needs no credentials and finishes in seconds on a typical repository, so it
+`decascan` is offline, needs no credentials and finishes in seconds on a typical repository, so it
 fits any pipeline as a plain command.
 
 | Exit code | Meaning |
@@ -22,7 +22,7 @@ CI if you want the gate to be stable: `-s mcp -s web`.
 ## GitHub Actions: the action
 
 ```yaml
-name: mcp-sift
+name: decascan
 on: [push, pull_request]
 
 permissions:
@@ -35,7 +35,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: cvas22/mcp-sift@main # pin to a tag or commit SHA once releases exist
+      - uses: cvas22/decascan@main # pin to a tag or commit SHA once releases exist
         with:
           path: .
           standard: auto        # or: mcp llm web | all
@@ -60,22 +60,22 @@ the repository's code scanning alerts, which deduplicate across runs.
 ## GitHub Actions: plain commands
 
 ```yaml
-- run: pip install mcp-sift
-- run: mcp-sift scan . -o sarif -f mcp-sift.sarif --no-fail
+- run: pip install decascan
+- run: decascan scan . -o sarif -f decascan.sarif --no-fail
 - uses: github/codeql-action/upload-sarif@v3
   with:
-    sarif_file: mcp-sift.sarif
-- run: mcp-sift scan . -o github --fail-on high # annotations, and the step that gates the build
+    sarif_file: decascan.sarif
+- run: decascan scan . -o github --fail-on high # annotations, and the step that gates the build
 ```
 
 ## pre-commit
 
 ```yaml
 repos:
-  - repo: https://github.com/cvas22/mcp-sift
+  - repo: https://github.com/cvas22/decascan
     rev: main # pin to a tag
     hooks:
-      - id: mcp-sift
+      - id: decascan
 ```
 
 The hook scans the whole tree rather than only staged files: the MCP rules compare a manifest with
@@ -84,27 +84,27 @@ the code, and a per-file scan would miss those cross-file findings.
 ## GitLab CI
 
 ```yaml
-mcp-sift:
+decascan:
   image: python:3.12-slim
   script:
-    - pip install mcp-sift
-    - mcp-sift scan . -o sarif -f mcp-sift.sarif --no-fail
-    - mcp-sift scan . --fail-on high
+    - pip install decascan
+    - decascan scan . -o sarif -f decascan.sarif --no-fail
+    - decascan scan . --fail-on high
   artifacts:
     when: always
-    paths: [mcp-sift.sarif]
+    paths: [decascan.sarif]
 ```
 
 ## Jenkins
 
 ```groovy
-stage('mcp-sift') {
+stage('decascan') {
   steps {
-    sh 'python3 -m venv .venv && .venv/bin/pip install mcp-sift'
-    sh '.venv/bin/mcp-sift scan . -o sarif -f mcp-sift.sarif --no-fail'
-    sh '.venv/bin/mcp-sift scan . --fail-on high'
+    sh 'python3 -m venv .venv && .venv/bin/pip install decascan'
+    sh '.venv/bin/decascan scan . -o sarif -f decascan.sarif --no-fail'
+    sh '.venv/bin/decascan scan . --fail-on high'
   }
-  post { always { archiveArtifacts artifacts: 'mcp-sift.sarif', allowEmptyArchive: true } }
+  post { always { archiveArtifacts artifacts: 'decascan.sarif', allowEmptyArchive: true } }
 }
 ```
 
@@ -112,21 +112,21 @@ stage('mcp-sift') {
 
 ```yaml
 - script: |
-    pip install mcp-sift
-    mcp-sift scan . -o sarif -f $(Build.ArtifactStagingDirectory)/mcp-sift.sarif --no-fail
-    mcp-sift scan . --fail-on high
-  displayName: mcp-sift
+    pip install decascan
+    decascan scan . -o sarif -f $(Build.ArtifactStagingDirectory)/decascan.sarif --no-fail
+    decascan scan . --fail-on high
+  displayName: decascan
 ```
 
 ## CircleCI
 
 ```yaml
 jobs:
-  mcp-sift:
+  decascan:
     docker: [{ image: cimg/python:3.12 }]
     steps:
       - checkout
-      - run: pip install mcp-sift && mcp-sift scan . --fail-on high
+      - run: pip install decascan && decascan scan . --fail-on high
 ```
 
 ## Paths when you scan a subdirectory
@@ -134,7 +134,7 @@ jobs:
 Findings carry paths relative to the directory you scanned. SARIF and `-o github` output add the
 directory's position inside the repository, so `path: services/api` reports
 `services/api/app.py` and GitHub puts the annotation on the right file. The repository root is
-`--repo-root` (or `MCP_SIFT_REPO_ROOT`), else `$GITHUB_WORKSPACE`, else the nearest `.git`. The JSON
+`--repo-root` (or `DECASCAN_REPO_ROOT`), else `$GITHUB_WORKSPACE`, else the nearest `.git`. The JSON
 report keeps scan-relative paths and records the offset as `path_prefix`.
 
 ## One finding per defect
@@ -146,10 +146,10 @@ are merged into the strongest one, which lists the others under `also_maps_to` (
 
 ## Keeping a log of the run
 
-Add `-vv --log-format json --log-file mcp-sift.log.jsonl` before `scan` to record which lists were
+Add `-vv --log-format json --log-file decascan.log.jsonl` before `scan` to record which lists were
 chosen and why, how long each rule took, and which files were skipped, then upload the file as a
 build artifact. The report (`-o json`, `-o sarif`) is separate and unaffected. The same settings are
-available as `MCP_SIFT_VERBOSE`, `MCP_SIFT_LOG_FORMAT` and `MCP_SIFT_LOG_FILE` environment variables.
+available as `DECASCAN_VERBOSE`, `DECASCAN_LOG_FORMAT` and `DECASCAN_LOG_FILE` environment variables.
 
 ## When something goes wrong
 
@@ -163,12 +163,12 @@ available as `MCP_SIFT_VERBOSE`, `MCP_SIFT_LOG_FORMAT` and `MCP_SIFT_LOG_FILE` e
   the detector does not know is not scanned for its list; force the list with `-s web`, `-s llm` or
   `-s all`.
 - **Annotations on the wrong file:** the scan directory is not inside the repository root the scanner
-  found. Pass `--repo-root "$GITHUB_WORKSPACE"` (or set `MCP_SIFT_REPO_ROOT`).
+  found. Pass `--repo-root "$GITHUB_WORKSPACE"` (or set `DECASCAN_REPO_ROOT`).
 
 ## Choosing a gate
 
 - Start with `--fail-on high` and `--no-fail` on a first run to see the baseline, then tighten.
-- Suppress a reviewed finding with `mcp-sift:ignore` on its line, or skip noisy directories with
+- Suppress a reviewed finding with `decascan:ignore` on its line, or skip noisy directories with
   `--exclude NAME` (repeatable). Tests, fixtures and `node_modules` are skipped by the pattern rules
   already.
 - Scanning the scanner's own rule tables trips its own patterns; exclude `rules` when you scan this

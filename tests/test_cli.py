@@ -8,9 +8,9 @@ from pathlib import Path
 from click.testing import CliRunner
 from rich.console import Console
 
-from mcp_sift.cli import main
-from mcp_sift.core.scanner import scan
-from mcp_sift.outputs import pretty
+from decascan.cli import main
+from decascan.core.scanner import scan
+from decascan.outputs import pretty
 
 FIXTURES = Path(__file__).parent / "fixtures"
 VULNERABLE = str(FIXTURES / "vulnerable_python")
@@ -56,7 +56,7 @@ def test_output_file_is_written(tmp_path):
         main, ["scan", VULNERABLE, "-o", "sarif", "-f", str(target), "--no-fail"]
     )
     assert result.exit_code == 0
-    assert json.loads(target.read_text())["runs"][0]["tool"]["driver"]["name"] == "mcp-sift"
+    assert json.loads(target.read_text())["runs"][0]["tool"]["driver"]["name"] == "decascan"
 
 
 def test_unknown_rule_id_is_rejected():

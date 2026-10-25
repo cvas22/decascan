@@ -37,8 +37,8 @@ def _annotation(finding: Finding, file_path: str) -> str:
 def render(result: ScanResult, version: str = "0.1.0") -> str:
     lines = [_annotation(f, result.repo_path(f)) for f in result.findings]
     for error in result.errors:
-        lines.append(f"::warning title=mcp-sift::{_escape_data(error)}")
+        lines.append(f"::warning title=decascan::{_escape_data(error)}")
     counts = result.counts_by_severity()
     summary = ", ".join(f"{n} {sev}" for sev, n in counts.items() if n) or "no findings"
-    lines.append(f"::notice title=mcp-sift {version}::{result.files_scanned} files scanned: {summary}")
+    lines.append(f"::notice title=decascan {version}::{result.files_scanned} files scanned: {summary}")
     return "\n".join(lines)

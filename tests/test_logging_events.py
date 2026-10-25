@@ -9,12 +9,12 @@ from pathlib import Path
 import pytest
 from click.testing import CliRunner
 
-import mcp_sift.core.context as context_module
-import mcp_sift.core.scanner as scanner_module
-from mcp_sift.cli import main
-from mcp_sift.core import log as logging_setup
-from mcp_sift.core.config import ScanConfig
-from mcp_sift.core.scanner import scan
+import decascan.core.context as context_module
+import decascan.core.scanner as scanner_module
+from decascan.cli import main
+from decascan.core import log as logging_setup
+from decascan.core.config import ScanConfig
+from decascan.core.scanner import scan
 
 FIXTURES = Path(__file__).parent / "fixtures"
 VULNERABLE = str(FIXTURES / "vulnerable_webllm")
@@ -39,8 +39,8 @@ class _Records:
 
 @pytest.fixture
 def records(caplog):
-    logging.getLogger("mcp_sift").propagate = True
-    caplog.set_level(logging.DEBUG, logger="mcp_sift")
+    logging.getLogger("decascan").propagate = True
+    caplog.set_level(logging.DEBUG, logger="decascan")
     return _Records(caplog)
 
 
@@ -111,7 +111,7 @@ def test_exit_reason_names_the_worst_severity_when_below_the_threshold(tmp_path)
 
 
 def test_an_aborted_scan_logs_the_failure_and_the_exit(monkeypatch, tmp_path):
-    import mcp_sift.cli as cli
+    import decascan.cli as cli
 
     def boom(*_a, **_k):
         raise RuntimeError("internal failure")
@@ -149,7 +149,7 @@ def test_rules_finished_summary_names_the_slowest_rules(records):
 
 def test_filtered_findings_are_counted(records, tmp_path):
     (tmp_path / "a.py").write_text(
-        "DEBUG = True  # mcp-sift:ignore\ntry:\n    x()\nexcept:\n    pass\n", encoding="utf-8"
+        "DEBUG = True  # decascan:ignore\ntry:\n    x()\nexcept:\n    pass\n", encoding="utf-8"
     )
     scan(tmp_path, ScanConfig(standards=frozenset({"web"}), min_severity=scanner_module.Severity.MEDIUM))
     filtered = first(records, "findings filtered")
@@ -304,7 +304,7 @@ def test_every_json_log_line_carries_its_fields():
     assert {"scan requested", "context built", "lists selected", "rules finished", "scan finished",
             "report written", "exiting"} <= {e["msg"] for e in events}
     finished = next(e for e in events if e["msg"] == "rules finished")
-    assert finished["level"] == "info" and finished["logger"] == "mcp_sift.scanner"
+    assert finished["level"] == "info" and finished["logger"] == "decascan.scanner"
     assert all(e["ts"] and e["level"] in {"debug", "info", "warning", "error"} for e in events)
 
 
@@ -323,7 +323,7 @@ def test_no_log_call_uses_a_key_that_logging_reserves():
 
     reserved = set(logging.makeLogRecord({}).__dict__) | {"message", "asctime"}
     offenders = []
-    for path in (Path(__file__).parent.parent / "src" / "mcp_sift").rglob("*.py"):
+    for path in (Path(__file__).parent.parent / "src" / "decascan").rglob("*.py"):
         for node in ast.walk(ast.parse(path.read_text(encoding="utf-8"))):
             if isinstance(node, ast.keyword) and node.arg == "extra" and isinstance(node.value, ast.Dict):
                 for key in node.value.keys:

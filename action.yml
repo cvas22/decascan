@@ -1,4 +1,4 @@
-name: mcp-sift
+name: decascan
 description: >-
   Offline OWASP Top 10 scan (MCP, LLM applications, web) of Python and TypeScript code. Fails the
   job on findings and can upload SARIF to GitHub code scanning.
@@ -27,7 +27,7 @@ inputs:
     default: ""
   sarif-file:
     description: Where to write the SARIF report.
-    default: mcp-sift.sarif
+    default: decascan.sarif
   upload-sarif:
     description: >-
       Upload the SARIF report to GitHub code scanning. Needs `security-events: write` (plus
@@ -42,7 +42,7 @@ inputs:
     default: "3.12"
   version:
     description: >-
-      mcp-sift version to install from PyPI (for example `0.1.0`). Empty installs the copy bundled
+      decascan version to install from PyPI (for example `0.1.0`). Empty installs the copy bundled
       with this action, which is the right choice when pinning the action to a tag or commit.
     default: ""
 
@@ -61,13 +61,13 @@ runs:
       with:
         python-version: ${{ inputs.python-version }}
 
-    - name: install mcp-sift
+    - name: install decascan
       shell: bash
       env:
         VERSION: ${{ inputs.version }}
       run: |
         if [ -n "$VERSION" ]; then
-          python -m pip install --quiet "mcp-sift==$VERSION"
+          python -m pip install --quiet "decascan==$VERSION"
         else
           python -m pip install --quiet "$GITHUB_ACTION_PATH"
         fi
@@ -93,11 +93,11 @@ runs:
         # The SARIF run decides the exit code. Annotations come from a second pass with --no-fail;
         # scans take seconds and run offline, so rendering twice beats a second output flag.
         set +e
-        mcp-sift scan "$SCAN_PATH" "${args[@]}" -o sarif -f "$SARIF_FILE"
+        decascan scan "$SCAN_PATH" "${args[@]}" -o sarif -f "$SARIF_FILE"
         code=$?
         set -e
         if [ "$ANNOTATIONS" = "true" ]; then
-          mcp-sift scan "$SCAN_PATH" "${args[@]}" -o github --no-fail
+          decascan scan "$SCAN_PATH" "${args[@]}" -o github --no-fail
         fi
 
         echo "sarif-file=$SARIF_FILE" >> "$GITHUB_OUTPUT"
@@ -109,4 +109,4 @@ runs:
       uses: github/codeql-action/upload-sarif@v3
       with:
         sarif_file: ${{ inputs.sarif-file }}
-        category: mcp-sift
+        category: decascan

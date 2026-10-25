@@ -21,10 +21,10 @@ sys.path.insert(0, str(ROOT / "src"))
 
 from rich.console import Console  # noqa: E402
 
-from mcp_sift.catalog import build_catalog  # noqa: E402
-from mcp_sift.core.config import ScanConfig  # noqa: E402
-from mcp_sift.core.scanner import scan  # noqa: E402
-from mcp_sift.outputs import pretty  # noqa: E402
+from decascan.catalog import build_catalog  # noqa: E402
+from decascan.core.config import ScanConfig  # noqa: E402
+from decascan.core.scanner import scan  # noqa: E402
+from decascan.outputs import pretty  # noqa: E402
 
 ASSETS = ROOT / "docs" / "assets"
 FONT = "Inter, -apple-system, 'Segoe UI', Helvetica, Arial, sans-serif"
@@ -50,7 +50,7 @@ def example_run() -> None:
     writer.line(f"  ... {len(result.findings) - shown} more findings not shown ...", style="dim")
     console.print()
     pretty._print_summary(result, result.findings, writer)
-    console.save_svg(str(ASSETS / "example-run.svg"), title="mcp-sift scan tests/fixtures/vulnerable_ts")
+    console.save_svg(str(ASSETS / "example-run.svg"), title="decascan scan tests/fixtures/vulnerable_ts")
 
 
 # status -> (colour, opacity, what it means)

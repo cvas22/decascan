@@ -1,4 +1,4 @@
-"""Intentionally poisoned MCP server. Fixture for mcp-sift tests — do not deploy.
+"""Intentionally poisoned MCP server. Fixture for decascan tests — do not deploy.
 
 Everything here is an attack on the *model* rather than on the process: instructions smuggled into
 tool descriptions, an evaluator handed to the model, and reads of files the model has no business

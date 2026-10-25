@@ -17,9 +17,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "src"))
 
-from mcp_sift.catalog import build_catalog  # noqa: E402
-from mcp_sift.core.config import ScanConfig  # noqa: E402
-from mcp_sift.core.scanner import scan  # noqa: E402
+from decascan.catalog import build_catalog  # noqa: E402
+from decascan.core.config import ScanConfig  # noqa: E402
+from decascan.core.scanner import scan  # noqa: E402
 
 DOC = ROOT / "docs" / "rules.md"
 MARKER = "<!-- generated: rules for the LLM and web Top 10 lists (scripts/generate_rule_docs.py) -->"

@@ -1,7 +1,7 @@
 # Standards and the cached catalog
 
-`mcp-sift` scans against three OWASP lists. Each is a `Standard` in
-[`core/standards.py`](../src/mcp_sift/core/standards.py).
+`decascan` scans against three OWASP lists. Each is a `Standard` in
+[`core/standards.py`](../src/decascan/core/standards.py).
 
 | `--standard` | List | Version | Risk ids | Rules |
 |--------------|------|---------|----------|-------|
@@ -51,11 +51,11 @@ A category is one of three things:
   does not imply the category was checked. `WEB06` is better served by `pip-audit` or `osv-scanner`;
 - **no rules yet** -- detectable in principle, not written. None today.
 
-`mcp-sift standards` prints this for every list.
+`decascan standards` prints this for every list.
 
 ## The cached catalog
 
-`src/mcp_sift/data/top10/` is a checked-in, offline snapshot of all of the above: every list, version,
+`src/decascan/data/top10/` is a checked-in, offline snapshot of all of the above: every list, version,
 risk, status and the rules mapped to it. It ships inside the wheel, one file per list:
 
 ```
@@ -70,11 +70,11 @@ diffs small (a new rule touches one list's file), lets a consumer load only the 
 a new list is a new file, not an edit to a shared one.
 
 ```bash
-mcp-sift standards --json                       # all lists, rebuilt from the code
-mcp-sift standards --json --cached              # all lists, assembled from the shipped files
-mcp-sift standards --json --cached -s llm       # just llm.json
-mcp-sift standards --export src/mcp_sift/data/top10    # refresh the snapshot (one file per list)
-mcp-sift standards --export catalog.json        # one combined file, for tools that expect one
+decascan standards --json                       # all lists, rebuilt from the code
+decascan standards --json --cached              # all lists, assembled from the shipped files
+decascan standards --json --cached -s llm       # just llm.json
+decascan standards --export src/decascan/data/top10    # refresh the snapshot (one file per list)
+decascan standards --export catalog.json        # one combined file, for tools that expect one
 ```
 
 The snapshot is generated from the code and never edited by hand. A test
@@ -96,7 +96,7 @@ A list's file (`llm.json`, schema 1):
 }
 ```
 
-`mcp-sift standards --json` (and `--cached`) without `-s` returns the combined shape, kept for
+`decascan standards --json` (and `--cached`) without `-s` returns the combined shape, kept for
 compatibility:
 
 ```json

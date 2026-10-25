@@ -6,9 +6,9 @@ import re
 
 import pytest
 
-from mcp_sift.core.config import ScanConfig
-from mcp_sift.core.findings import Severity
-from mcp_sift.core.scanner import scan
+from decascan.core.config import ScanConfig
+from decascan.core.findings import Severity
+from decascan.core.scanner import scan
 
 # Rules are tested one at a time, so cross-list merging (tested separately) is off.
 ALL_LISTS = ScanConfig(standards=frozenset({"llm", "web"}), merge_duplicates=False)
@@ -290,7 +290,7 @@ def test_rule_stays_quiet_on_the_safe_form(tmp_path, rule, source):
 
 
 def test_every_pattern_rule_has_a_positive_and_negative_case():
-    from mcp_sift.rules import all_rules
+    from decascan.rules import all_rules
 
     pattern_rules = {r.id for r in all_rules() if r.standard in {"llm", "web"}}
     assert pattern_rules == {rule for rule, *_ in POSITIVE}
@@ -363,7 +363,7 @@ def test_findings_carry_line_numbers_and_snippets(tmp_path):
 
 
 def test_inline_suppression_works_for_the_new_rules(tmp_path):
-    assert findings(tmp_path, "DEBUG = True  # mcp-sift:ignore\n", rule="WEB05-001") == []
+    assert findings(tmp_path, "DEBUG = True  # decascan:ignore\n", rule="WEB05-001") == []
 
 
 def test_commented_out_code_is_ignored(tmp_path):

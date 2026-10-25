@@ -8,8 +8,8 @@ from __future__ import annotations
 
 import pytest
 
-from mcp_sift.core.config import ScanConfig
-from mcp_sift.core.scanner import scan
+from decascan.core.config import ScanConfig
+from decascan.core.scanner import scan
 
 MCP_ONLY = ScanConfig(standards=frozenset({"mcp"}), merge_duplicates=False)
 

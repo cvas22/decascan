@@ -4,25 +4,31 @@ All notable changes. The project is pre-release (v0.1); nothing has been publish
 
 ## Unreleased
 
+### Renamed
+- The project is now **DecaScan** (it was `mcp-sift`): the package, the `decascan` command, the Python
+  module, the GitHub Action, the SARIF tool name, the `DECASCAN_*` environment variables and the
+  `decascan:ignore` suppression marker. The old `mcp-sift:ignore` markers and `MCP_SIFT_*` variables are
+  still accepted.
+
 ### Added
 - **Three Top 10 lists.** Besides the OWASP MCP Top 10, the scanner covers the Top 10 for LLM
   Applications (2025) and the web Top 10 (2021) with 28 pattern-based rules. Categories no static scan
-  can establish are reported as "not static" by `mcp-sift standards`.
+  can establish are reported as "not static" by `decascan standards`.
 - **`--standard auto|all|mcp|llm|web`.** `auto` (the default) picks the lists from the code's imports
   and dependencies and says why; an unrecognised codebase gets every list.
 - **Cached catalog** of the lists and their rules, one JSON file per list in
-  `src/mcp_sift/data/top10/` (`standards --json --cached [-s LIST]`, `--export`), kept in step with the
+  `src/decascan/data/top10/` (`standards --json --cached [-s LIST]`, `--export`), kept in step with the
   code by a test.
 - **CI/CD:** a composite GitHub Action (`action.yml`), `-o github` annotations, a pre-commit hook,
   a code-scanning workflow, and `docs/ci.md` with recipes for GitLab, Jenkins, Azure Pipelines and
   CircleCI. The pipeline runs the unit tests with a coverage floor, and releases are gated on them.
-- **Logging:** `-v`/`-vv`, `--log-file`, `--log-format text|json`, and `MCP_SIFT_*` environment
+- **Logging:** `-v`/`-vv`, `--log-file`, `--log-format text|json`, and `DECASCAN_*` environment
   variables. Logs go to stderr or a file, never stdout.
   The log now covers the request, the effective configuration, every file read, manifests,
   dependency files, which lists were chosen and why, per-rule timings and the slowest rules, what
   was filtered or merged, the report written, the exit decision, and warnings for slow files and
   rules.
-- `--repo-root` / `MCP_SIFT_REPO_ROOT`, and `--keep-duplicates`.
+- `--repo-root` / `DECASCAN_REPO_ROOT`, and `--keep-duplicates`.
 
 ### Changed
 - **SARIF and annotation paths are repository-relative** (they were relative to the scanned

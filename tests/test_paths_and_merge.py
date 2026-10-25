@@ -9,13 +9,13 @@ from pathlib import Path
 import pytest
 from click.testing import CliRunner
 
-from mcp_sift.cli import main
-from mcp_sift.core.config import ScanConfig
-from mcp_sift.core.findings import Finding, Severity
-from mcp_sift.core.merge import merge_cross_list
-from mcp_sift.core.paths import find_git_root, path_prefix, repo_path, resolve_repo_root
-from mcp_sift.core.scanner import scan
-from mcp_sift.outputs import github, sarif
+from decascan.cli import main
+from decascan.core.config import ScanConfig
+from decascan.core.findings import Finding, Severity
+from decascan.core.merge import merge_cross_list
+from decascan.core.paths import find_git_root, path_prefix, repo_path, resolve_repo_root
+from decascan.core.scanner import scan
+from decascan.outputs import github, sarif
 
 # --- paths -------------------------------------------------------------------------------------
 
@@ -120,7 +120,7 @@ def test_cli_repo_root_from_environment(tmp_path):
     out = CliRunner().invoke(
         main,
         ["scan", str(repo / "services"), "-s", "web", "-o", "github", "--no-fail"],
-        env={"MCP_SIFT_REPO_ROOT": str(repo)},
+        env={"DECASCAN_REPO_ROOT": str(repo)},
     )
     assert "file=services/api/app.py" in out.stdout
 

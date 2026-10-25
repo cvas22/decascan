@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import pytest
 
-from mcp_sift.core.config import ScanConfig
-from mcp_sift.core.mask import mask_javascript, mask_python, mask_source
-from mcp_sift.core.scanner import scan
+from decascan.core.config import ScanConfig
+from decascan.core.mask import mask_javascript, mask_python, mask_source
+from decascan.core.scanner import scan
 
 WEB = ScanConfig(standards=frozenset({"web"}), merge_duplicates=False)
 
@@ -173,12 +173,12 @@ def test_the_scanners_own_docstring_examples_no_longer_trip_it(tmp_path):
 
 
 def test_inline_suppression_still_works_when_comments_are_masked(tmp_path):
-    (tmp_path / "app.py").write_text("DEBUG = True  # mcp-sift:ignore\n", encoding="utf-8")
+    (tmp_path / "app.py").write_text("DEBUG = True  # decascan:ignore\n", encoding="utf-8")
     assert scan(tmp_path, WEB).findings == []
 
 
 def test_masked_text_is_cached_per_file(tmp_path):
-    from mcp_sift.core.context import build_context
+    from decascan.core.context import build_context
 
     (tmp_path / "a.py").write_text("# c\nx = 1\n", encoding="utf-8")
     ctx = build_context(tmp_path, ScanConfig())
@@ -193,5 +193,5 @@ def test_blank_lines_above_a_match_do_not_shift_its_line_number(tmp_path):
 
 
 def test_inline_suppression_works_after_blank_lines(tmp_path):
-    (tmp_path / "app.py").write_text("\n\nDEBUG = True  # mcp-sift:ignore\n", encoding="utf-8")
+    (tmp_path / "app.py").write_text("\n\nDEBUG = True  # decascan:ignore\n", encoding="utf-8")
     assert scan(tmp_path, WEB).findings == []

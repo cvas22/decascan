@@ -14,10 +14,10 @@
 /.pre-commit-hooks.yaml     @cvas22
 
 # What the scanner detects, and the files generated from it.
-/src/mcp_sift/rules/        @cvas22
-/src/mcp_sift/parsers/      @cvas22
-/src/mcp_sift/core/standards.py  @cvas22
-/src/mcp_sift/data/         @cvas22
+/src/decascan/rules/        @cvas22
+/src/decascan/parsers/      @cvas22
+/src/decascan/core/standards.py  @cvas22
+/src/decascan/data/         @cvas22
 /docs/rules.md              @cvas22
 
 # Packaging and release metadata.
