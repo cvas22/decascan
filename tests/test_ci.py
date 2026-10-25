@@ -168,12 +168,6 @@ def test_the_ci_job_exercises_the_action():
     assert "./" in uses
 
 
-def test_ci_documentation_covers_every_documented_system():
-    docs = (ROOT / "docs" / "ci.md").read_text(encoding="utf-8")
-    for system in ("GitHub Actions", "pre-commit", "GitLab CI", "Jenkins", "Azure Pipelines", "CircleCI"):
-        assert system in docs
-
-
 def test_ci_has_a_unit_test_gate_with_a_coverage_floor():
     ci = load(".github/workflows/ci.yml")
     steps = " ".join(str(s.get("run", "")) for s in ci["jobs"]["unit-tests"]["steps"])

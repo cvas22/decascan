@@ -4,7 +4,7 @@
     python scripts/generate_rule_docs.py --check    # exit 1 if the file is out of date
 
 Severity, CWE and confidence come from running every rule on its positive test samples, so the docs
-cannot drift from what the scanner reports. `tests/test_docs.py` runs the same comparison.
+cannot drift from what the scanner reports.
 """
 
 from __future__ import annotations
