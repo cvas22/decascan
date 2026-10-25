@@ -18,7 +18,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 LOGGER_NAME = "mcp_sift"
-FORMATS = ("text", "json")
+# `txt` is an alias for `text`: plain lines, one per record.
+FORMATS = ("text", "txt", "json")
 
 # Attributes every LogRecord has; anything else on a record came from `extra=` and is a field.
 _STANDARD_ATTRS = frozenset(logging.makeLogRecord({}).__dict__) | {"message", "asctime", "taskName"}

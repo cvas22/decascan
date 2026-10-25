@@ -215,11 +215,12 @@ command:
 |--------|---------|--------------|
 | `-v` / `-vv` | `MCP_SIFT_VERBOSE` | `-v` logs progress (lists chosen and why, files, findings, time); `-vv` adds per-rule timings, skipped files and suppressed findings. |
 | `--log-file PATH` | `MCP_SIFT_LOG_FILE` | Write the log to a file instead of stderr. |
-| `--log-format {text,json}` | `MCP_SIFT_LOG_FORMAT` | `json` writes one JSON object per line (`ts`, `level`, `logger`, `msg`, plus fields). |
+| `--log-format {text,txt,json}` | `MCP_SIFT_LOG_FORMAT` | `text` (default; `txt` is an alias) writes plain `time LEVEL message key=value` lines; `json` writes one JSON object per line (`ts`, `level`, `logger`, `msg`, plus fields). |
 
 ```bash
 mcp-sift -v scan .                                  # progress on stderr
-mcp-sift -vv --log-format json --log-file scan.jsonl scan . -o json -f report.json
+mcp-sift -vv --log-format txt --log-file scan.log scan . -o json -f report.json   # plain-text log
+mcp-sift -vv --log-format json --log-file scan.jsonl scan .                        # structured log
 ```
 
 As a library, the `mcp_sift` logger is silent until you configure it.

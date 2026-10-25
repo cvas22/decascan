@@ -89,6 +89,21 @@ def test_environment_variables_configure_logging(tmp_path):
     assert "rule finished" in log_file.read_text(encoding="utf-8")
 
 
+def test_txt_is_a_plain_text_log_and_an_alias_for_text(tmp_path):
+    txt, text = tmp_path / "a.txt", tmp_path / "b.log"
+    run("--log-format", "txt", "--log-file", str(txt), "scan", VULNERABLE, "--no-fail")
+    run("--log-format", "text", "--log-file", str(text), "scan", VULNERABLE, "--no-fail")
+    lines = txt.read_text(encoding="utf-8").splitlines()
+    assert lines and not lines[0].startswith("{")
+    assert "INFO" in lines[0] and "scan started" in lines[0]
+
+    def stable(path):  # drop the timestamp and the timing-dependent lines
+        rows = path.read_text(encoding="utf-8").splitlines()
+        return [row.split(" ", 1)[1] for row in rows if "seconds=" not in row]
+
+    assert stable(txt) == stable(text)
+
+
 def test_unknown_log_format_is_rejected():
     assert run("--log-format", "xml", "scan", VULNERABLE).exit_code == 2
 
