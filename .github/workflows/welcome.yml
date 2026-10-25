@@ -10,10 +10,9 @@ permissions: {}
 
 jobs:
   welcome:
-    # Only for outside contributors: the owner, members, collaborators and bots do not need the greeting.
+    # GitHub labels the author's relationship to the repository; greet only people new to it.
     if: >-
-      github.actor != 'dependabot[bot]' &&
-      !contains(fromJSON('["OWNER","MEMBER","COLLABORATOR"]'),
+      contains(fromJSON('["FIRST_TIMER","FIRST_TIME_CONTRIBUTOR"]'),
         github.event.pull_request.author_association || github.event.issue.author_association)
     runs-on: ubuntu-latest
     timeout-minutes: 5
