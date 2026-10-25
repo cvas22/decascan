@@ -41,3 +41,18 @@ All notable changes. The project is pre-release (v0.1); nothing has been publish
 - Symlinks inside the scanned tree were followed.
 - A match after blank lines was reported on the wrong line (a `^\s*` regex spanned newlines).
 - `--output-file` for the pretty format left its file handle open.
+- **A class named `Server` is not an MCP server.** MCP server detection went by constructor name, so a
+  threat-modelling library that instantiates its own `Server` class was reported as 138 "multiple MCP
+  servers" and auto-detection picked the MCP list for it. Detection now follows where the name was
+  imported from.
+- `requirements.txt` lines with a URL fragment (`git+https://...#egg=name`) lost the package name:
+  `#` is a comment only after whitespace.
+- A tool that returns only `requests.get(url).status_code` (or `len(...)` of a response) is no longer
+  reported as returning remote content (MCP06-003).
+- MCP10: `~/.bash_history` and `~/.zsh_history` count as credential files, and `Path.home()` as a
+  broad filesystem root.
+- Web rules: `os.popen` is treated as a shell, `new Function(a, body)` checks the body, JS
+  `algorithms: ['none']` is caught, and `document.write('<static>')` is not reported.
+- TypeScript parser: a quoted word is no longer mistaken for a tool parameter (`exec("echo command")`),
+  and fetched content returned through a variable (`const body = await res.text(); return body`) is
+  recognised.
