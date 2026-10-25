@@ -9,10 +9,10 @@ import pytest
 import yaml
 from click.testing import CliRunner
 
-from mcp_sift.cli import main
-from mcp_sift.core.findings import Finding, Severity
-from mcp_sift.core.scanner import ScanResult
-from mcp_sift.outputs import github
+from decascan.cli import main
+from decascan.core.findings import Finding, Severity
+from decascan.core.scanner import ScanResult
+from decascan.outputs import github
 
 ROOT = Path(__file__).parent.parent
 FIXTURES = ROOT / "tests" / "fixtures"
@@ -79,12 +79,12 @@ def test_workflow_command_metacharacters_are_escaped():
 
 def test_scan_errors_become_warnings_and_a_summary_closes_the_output():
     lines = github.render(result([finding()], errors=["boom"]), "9.9").splitlines()
-    assert "::warning title=mcp-sift::boom" in lines
-    assert lines[-1].startswith("::notice title=mcp-sift 9.9::2 files scanned: 1 high")
+    assert "::warning title=decascan::boom" in lines
+    assert lines[-1].startswith("::notice title=decascan 9.9::2 files scanned: 1 high")
 
 
 def test_empty_result_still_prints_a_summary():
-    assert github.render(result([])) == "::notice title=mcp-sift 0.1.0::2 files scanned: no findings"
+    assert github.render(result([])) == "::notice title=decascan 0.1.0::2 files scanned: no findings"
 
 
 def test_cli_github_format_end_to_end():
@@ -157,8 +157,8 @@ def test_action_defaults_match_the_cli_defaults():
 
 def test_pre_commit_hook_scans_the_whole_tree():
     (hook,) = load(".pre-commit-hooks.yaml")
-    assert hook["id"] == "mcp-sift" and hook["pass_filenames"] is False
-    assert hook["entry"] == "mcp-sift scan"
+    assert hook["id"] == "decascan" and hook["pass_filenames"] is False
+    assert hook["entry"] == "decascan scan"
 
 
 def test_the_ci_job_exercises_the_action():
@@ -171,7 +171,7 @@ def test_the_ci_job_exercises_the_action():
 def test_ci_has_a_unit_test_gate_with_a_coverage_floor():
     ci = load(".github/workflows/ci.yml")
     steps = " ".join(str(s.get("run", "")) for s in ci["jobs"]["unit-tests"]["steps"])
-    assert "pytest" in steps and "--cov=mcp_sift" in steps and "--junitxml" in steps
+    assert "pytest" in steps and "--cov=decascan" in steps and "--junitxml" in steps
     assert set(ci["jobs"]["ci-pass"]["needs"]) == {"unit-tests", "test", "linux-distros", "action"}
     # tomllib is 3.11+, and this project still supports 3.10, so read the one value by hand.
     pyproject = (ROOT / "pyproject.toml").read_text(encoding="utf-8")

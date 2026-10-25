@@ -9,9 +9,9 @@ from __future__ import annotations
 
 import pytest
 
-from mcp_sift.core.config import ScanConfig
-from mcp_sift.core.scanner import scan
-from mcp_sift.parsers.python_source import _is_mcp_constructor, parse_python
+from decascan.core.config import ScanConfig
+from decascan.core.scanner import scan
+from decascan.parsers.python_source import _is_mcp_constructor, parse_python
 
 MCP = ScanConfig(standards=frozenset({"mcp"}), merge_duplicates=False)
 

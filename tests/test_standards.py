@@ -8,11 +8,11 @@ from pathlib import Path
 import pytest
 from click.testing import CliRunner
 
-from mcp_sift.cli import main
-from mcp_sift.core.config import ScanConfig
-from mcp_sift.core.scanner import scan
-from mcp_sift.core.standards import STANDARDS
-from mcp_sift.rules import all_rules
+from decascan.cli import main
+from decascan.core.config import ScanConfig
+from decascan.core.scanner import scan
+from decascan.core.standards import STANDARDS
+from decascan.rules import all_rules
 
 FIXTURES = Path(__file__).parent / "fixtures"
 VULNERABLE = FIXTURES / "vulnerable_webllm"
@@ -123,8 +123,8 @@ def test_secret_values_are_redacted_in_snippets(tmp_path):
 
 
 def test_cached_catalog_matches_the_rules_in_code():
-    # Refresh with: mcp-sift standards --export src/mcp_sift/data/top10
-    from mcp_sift.catalog import build_catalog, load_cached_catalog
+    # Refresh with: decascan standards --export src/decascan/data/top10
+    from decascan.catalog import build_catalog, load_cached_catalog
 
     assert load_cached_catalog() == build_catalog()
 

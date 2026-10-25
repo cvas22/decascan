@@ -10,7 +10,7 @@ self-contained file per list:
 One file per list keeps diffs small (adding a rule touches one list's file), lets a consumer load only
 the list it needs, and makes a new list a new file. There is no index: the lists are the files.
 
-The directory is generated from the code by `mcp-sift standards --export`, and a test fails when the
+The directory is generated from the code by `decascan standards --export`, and a test fails when the
 two drift apart, so it is always a faithful offline reference for what each version of the scanner
 covers.
 """
@@ -89,7 +89,7 @@ def export_catalog(path: Path) -> list[Path]:
 
 
 def _data():
-    return resources.files("mcp_sift").joinpath(DATA_DIR)
+    return resources.files("decascan").joinpath(DATA_DIR)
 
 
 def cached_standard_ids() -> list[str]:

@@ -2,10 +2,10 @@
 
 The scanner's own report (pretty, JSON, SARIF, annotations) goes to stdout. Logs are diagnostics
 about the run itself -- which lists were chosen, how long each rule took, which files were skipped
-and why -- and always go to stderr or a file, never to stdout, so `mcp-sift scan -o json | jq` keeps
+and why -- and always go to stderr or a file, never to stdout, so `decascan scan -o json | jq` keeps
 working with logging turned on.
 
-Library users get the standard behaviour: every module logs to a child of the `mcp_sift` logger,
+Library users get the standard behaviour: every module logs to a child of the `decascan` logger,
 which has a NullHandler until someone configures it.
 """
 
@@ -17,7 +17,7 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
-LOGGER_NAME = "mcp_sift"
+LOGGER_NAME = "decascan"
 FORMATS = ("text", "json")
 
 # Attributes every LogRecord has; anything else on a record came from `extra=` and is a field.
@@ -68,7 +68,7 @@ def level_for(verbosity: int) -> int:
 
 
 def configure(verbosity: int = 0, log_file: Path | None = None, log_format: str = "text") -> logging.Logger:
-    """Attach handlers to the `mcp_sift` logger. Idempotent: earlier handlers are replaced."""
+    """Attach handlers to the `decascan` logger. Idempotent: earlier handlers are replaced."""
     if log_format not in FORMATS:
         raise ValueError(f"unknown log format {log_format!r} (expected one of: {', '.join(FORMATS)})")
 

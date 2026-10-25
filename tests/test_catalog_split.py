@@ -8,7 +8,7 @@ from pathlib import Path
 import pytest
 from click.testing import CliRunner
 
-from mcp_sift.catalog import (
+from decascan.catalog import (
     build_catalog,
     build_files,
     cached_standard_ids,
@@ -16,10 +16,10 @@ from mcp_sift.catalog import (
     load_cached_catalog,
     load_cached_standard,
 )
-from mcp_sift.cli import main
-from mcp_sift.core.standards import STANDARDS
+from decascan.cli import main
+from decascan.core.standards import STANDARDS
 
-DATA = Path(__file__).parent.parent / "src" / "mcp_sift" / "data" / "top10"
+DATA = Path(__file__).parent.parent / "src" / "decascan" / "data" / "top10"
 
 
 def test_one_file_per_list_and_nothing_else():
@@ -29,7 +29,7 @@ def test_one_file_per_list_and_nothing_else():
 
 
 def test_checked_in_files_match_what_the_code_generates():
-    # Refresh with: mcp-sift standards --export src/mcp_sift/data/top10
+    # Refresh with: decascan standards --export src/decascan/data/top10
     for name, text in build_files().items():
         assert (DATA / name).read_text(encoding="utf-8") == text, name
 
@@ -92,7 +92,7 @@ def test_cli_export_reports_each_file(tmp_path):
 
 
 def test_a_new_list_is_just_a_new_file(tmp_path, monkeypatch):
-    import mcp_sift.catalog as catalog
+    import decascan.catalog as catalog
 
     (tmp_path / "api.json").write_text(json.dumps({"schema": 1, "id": "api", "risks": []}), encoding="utf-8")
     for name in ("mcp", "llm", "web"):

@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="docs/assets/banner.svg" alt="mcp-sift: an offline OWASP Top 10 scanner for MCP, LLM and web code" width="820">
+<img src="docs/assets/banner.svg" alt="decascan: an offline OWASP Top 10 scanner for MCP, LLM and web code" width="820">
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](#install)
 [![License Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue?style=for-the-badge)](LICENSE)
@@ -17,13 +17,16 @@ the MCP Top 10, the Top 10 for LLM Applications, and the web Top 10.**
 
 ---
 
+**DecaScan** takes its name from *deca*, ten: it scans for the OWASP Top 10 risks. The command is
+`decascan`.
+
 MCP servers run with the privileges of the developer who installed them: they read files, call
 internal APIs, and execute commands on behalf of an LLM that anything in its context window can
-influence. `mcp-sift` reads a server's manifest, config, and source and tells you where that trust
+influence. `decascan` reads a server's manifest, config, and source and tells you where that trust
 is misplaced — before you ship it. The same scan also checks the application code around it for
 the LLM-specific and classic web risks, and groups every finding by list and category.
 
-No API key. No network calls. No account. `mcp-sift scan .` and you have your answer.
+No API key. No network calls. No account. `decascan scan .` and you have your answer.
 
 ## Example run
 
@@ -32,7 +35,7 @@ about 10 ms. Reproduce it yourself with the command below. Findings are printed 
 the first six are shown and the other nine are summarised at the end.
 
 <div align="center">
-  <img src="docs/assets/example-run.svg" alt="Terminal output of mcp-sift scanning a vulnerable TypeScript MCP server" width="860">
+  <img src="docs/assets/example-run.svg" alt="Terminal output of decascan scanning a vulnerable TypeScript MCP server" width="860">
   <p><em>A real run: the first two of fifteen findings, then the summary.</em></p>
 </div>
 
@@ -40,7 +43,7 @@ the first six are shown and the other nine are summarised at the end.
 <summary>The same run as text (six findings)</summary>
 
 ```console
-$ mcp-sift scan tests/fixtures/vulnerable_ts
+$ decascan scan tests/fixtures/vulnerable_ts
 
 Auto-detected: mcp (depends on @modelcontextprotocol/sdk, defines MCP tools or a server, imports
 @modelcontextprotocol/sdk/server/mcp.js)
@@ -147,7 +150,7 @@ Four things that run demonstrates, in order of how much they matter:
 - **Confidence is reported honestly** — 90% on the co-location check, 70% on the name-matched TS
   flow — because one is near-certain and the other is a pattern that is only *usually* a problem.
 
-By contrast, `mcp-sift scan tests/fixtures/clean_python` prints a green "No findings" and exits `0`,
+By contrast, `decascan scan tests/fixtures/clean_python` prints a green "No findings" and exits `0`,
 and so do the real `mcp-server-fetch` and `mcp-server-time`.
 
 ---
@@ -155,7 +158,7 @@ and so do the real `mcp-server-fetch` and `mcp-server-time`.
 ## Install
 
 ```bash
-pip install mcp-sift
+pip install decascan
 ```
 
 Requires Python 3.10 or newer. It has three small dependencies (`click`, `rich`, `PyYAML`) and runs
@@ -165,24 +168,24 @@ entirely offline.
 > the first release is published. Until then, install from a clone:
 >
 > ```bash
-> git clone https://github.com/cvas22/mcp-sift && cd mcp-sift
+> git clone https://github.com/cvas22/decascan && cd decascan
 > pip install .          # or: pip install -e ".[dev]" to hack on it
 > ```
 >
-> Either way `pip` puts a `mcp-sift` launcher in your Python `Scripts/` (Windows) or `bin/`
+> Either way `pip` puts a `decascan` launcher in your Python `Scripts/` (Windows) or `bin/`
 > (macOS/Linux) directory. On macOS/Linux that's usually already on `PATH`; on Windows, if
-> `mcp-sift` isn't found afterward, add that `Scripts\` directory to `PATH`, or run it with
-> `python -m mcp_sift.cli ...` in the meantime.
+> `decascan` isn't found afterward, add that `Scripts\` directory to `PATH`, or run it with
+> `python -m decascan.cli ...` in the meantime.
 
 ## Use
 
 ```bash
-mcp-sift scan ./server              # human-readable
-mcp-sift scan ./server -o json      # for pipelines
-mcp-sift scan ./server -o sarif -f results.sarif   # for GitHub Code Scanning
-mcp-sift scan ./app -s llm -s web   # only the LLM and web Top 10 lists
-mcp-sift rules                      # what it checks and why
-mcp-sift standards                  # each Top 10 list and which categories have rules
+decascan scan ./server              # human-readable
+decascan scan ./server -o json      # for pipelines
+decascan scan ./server -o sarif -f results.sarif   # for GitHub Code Scanning
+decascan scan ./app -s llm -s web   # only the LLM and web Top 10 lists
+decascan rules                      # what it checks and why
+decascan standards                  # each Top 10 list and which categories have rules
 ```
 
 By default (`--standard auto`) the lists are **auto-detected** from the code's imports and declared
@@ -191,15 +194,15 @@ OpenAI app the LLM list, and the report says what it detected and why. If nothin
 list runs. Choose explicitly with `-s mcp`, `-s llm`, `-s web` (repeatable) or `-s all`; `auto`
 cannot be combined with other values.
 
-`mcp-sift scan` exits `1` when it finds something at or above `--fail-on` (default: `high`), so it
+`decascan scan` exits `1` when it finds something at or above `--fail-on` (default: `high`), so it
 drops into CI unchanged:
 
 ```yaml
-- run: pip install mcp-sift
-- run: mcp-sift scan . --output sarif --output-file mcp-sift.sarif --no-fail
+- run: pip install decascan
+- run: decascan scan . --output sarif --output-file decascan.sarif --no-fail
 - uses: github/codeql-action/upload-sarif@v3
   with:
-    sarif_file: mcp-sift.sarif
+    sarif_file: decascan.sarif
 ```
 
 Uploading SARIF needs `security-events: write`, and on a private repository also `actions: read` and
@@ -207,16 +210,17 @@ GitHub Code Security enabled; without them the upload step fails with "Resource 
 integration". Keep the file as a build artifact if you cannot enable it.
 
 Suppress a finding you've reviewed by putting a suppression marker on the same source line —
-any of `mcp-sift:ignore`, `mcp-sift: ignore`, or `nosec mcp-sift`.
+any of `decascan:ignore`, `decascan: ignore`, or `nosec decascan`. The tool was called `mcp-sift` before
+it was renamed; its `mcp-sift:ignore` markers and `MCP_SIFT_*` environment variables are still accepted.
 
 ## CI/CD
 
 A GitHub Action, a pre-commit hook and copy-paste recipes for GitLab, Jenkins, Azure Pipelines and
-CircleCI are in [docs/ci.md](https://github.com/cvas22/mcp-sift/blob/main/docs/ci.md).
+CircleCI are in [docs/ci.md](https://github.com/cvas22/decascan/blob/main/docs/ci.md).
 
 ```yaml
 - uses: actions/checkout@v4
-- uses: cvas22/mcp-sift@main # pin to a tag or commit SHA
+- uses: cvas22/decascan@main # pin to a tag or commit SHA
   with:
     fail-on: high
     upload-sarif: "true" # needs security-events: write (and actions: read on a private repo)
@@ -227,7 +231,7 @@ CircleCI are in [docs/ci.md](https://github.com/cvas22/mcp-sift/blob/main/docs/c
 Three commands: `scan`, `rules` and `standards`. `PATH` may be a directory **or a single file**.
 
 ```console
-$ mcp-sift scan PATH [options]
+$ decascan scan PATH [options]
 ```
 
 | Option | Default | What it does |
@@ -240,7 +244,7 @@ $ mcp-sift scan PATH [options]
 | `--rule ID` | all | Run only these rule ids. Repeatable. |
 | `--disable ID` | none | Skip these rule ids. Repeatable. |
 | `--exclude DIR` | see below | Extra directory names to skip, on top of the defaults. Repeatable. |
-| `--repo-root DIR` | auto | Repository root, so SARIF and annotations carry repo-relative paths when `PATH` is a subdirectory. Also `MCP_SIFT_REPO_ROOT`. Defaults to `$GITHUB_WORKSPACE`, else the nearest `.git`. |
+| `--repo-root DIR` | auto | Repository root, so SARIF and annotations carry repo-relative paths when `PATH` is a subdirectory. Also `DECASCAN_REPO_ROOT`. Defaults to `$GITHUB_WORKSPACE`, else the nearest `.git`. |
 | `--keep-duplicates` | off | Report a defect once per Top 10 list instead of merging it into one finding that lists the others under "Also maps to". |
 | `--no-fail` | off | Always exit `0`, whatever is found. |
 
@@ -250,16 +254,16 @@ command:
 
 | Option | Env var | What it does |
 |--------|---------|--------------|
-| `-v` / `-vv` | `MCP_SIFT_VERBOSE` | `-v` logs progress (lists chosen and why, files, findings, time); `-vv` adds per-rule timings, skipped files and suppressed findings. |
-| `--log-file PATH` | `MCP_SIFT_LOG_FILE` | Write the log to a file instead of stderr. |
-| `--log-format {text,json}` | `MCP_SIFT_LOG_FORMAT` | `json` writes one JSON object per line (`ts`, `level`, `logger`, `msg`, plus fields). |
+| `-v` / `-vv` | `DECASCAN_VERBOSE` | `-v` logs progress (lists chosen and why, files, findings, time); `-vv` adds per-rule timings, skipped files and suppressed findings. |
+| `--log-file PATH` | `DECASCAN_LOG_FILE` | Write the log to a file instead of stderr. |
+| `--log-format {text,json}` | `DECASCAN_LOG_FORMAT` | `json` writes one JSON object per line (`ts`, `level`, `logger`, `msg`, plus fields). |
 
 ```bash
-mcp-sift -v scan .                                  # progress on stderr
-mcp-sift -vv --log-format json --log-file scan.jsonl scan . -o json -f report.json
+decascan -v scan .                                  # progress on stderr
+decascan -vv --log-format json --log-file scan.jsonl scan . -o json -f report.json
 ```
 
-As a library, the `mcp_sift` logger is silent until you configure it.
+As a library, the `decascan` logger is silent until you configure it.
 
 At `-v` the log shows the request, file and rule counts, which lists were chosen and why, what was
 filtered or merged, the slowest rules, the report destination and the exit decision. At `-vv` it adds
@@ -280,12 +284,12 @@ Default excludes (always skipped): `.git`, `node_modules`, `__pycache__`, `.venv
 | `1` | A finding at or above `--fail-on` is present |
 | `2` | Bad invocation (unknown rule id, missing path, …) or the scan itself aborted (for example an unwritable `--output-file`). Never `1`, so a crash is not mistaken for findings. |
 
-`mcp-sift rules [-s LIST]` lists every built-in rule and the OWASP risk it maps to.
-`mcp-sift standards` shows each Top 10 list and which of its categories have rules. With `--json` it
+`decascan rules [-s LIST]` lists every built-in rule and the OWASP risk it maps to.
+`decascan standards` shows each Top 10 list and which of its categories have rules. With `--json` it
 prints the catalog; `--json --cached` prints the snapshot shipped in the package
-(`src/mcp_sift/data/top10/`, one JSON file per list; `-s llm` prints just one) without loading any rule,
+(`src/decascan/data/top10/`, one JSON file per list; `-s llm` prints just one) without loading any rule,
 and `--export PATH` rewrites the snapshot.
-See [docs/standards.md](https://github.com/cvas22/mcp-sift/blob/main/docs/standards.md).
+See [docs/standards.md](https://github.com/cvas22/decascan/blob/main/docs/standards.md).
 
 ---
 
@@ -311,7 +315,7 @@ MCP rules.
 
 All ten OWASP MCP Top 10 risks, across 26 rules. Findings carry a CWE id and a confidence score, and
 every one tells you how to fix it. Full detail per rule in
-[docs/rules.md](https://github.com/cvas22/mcp-sift/blob/main/docs/rules.md).
+[docs/rules.md](https://github.com/cvas22/decascan/blob/main/docs/rules.md).
 
 | Risk | Rule | What fires |
 |------|------|-----------|
@@ -345,7 +349,7 @@ every one tells you how to fix it. Full detail per rule in
 ### LLM Applications and web rules
 
 Severity, CWE, confidence, an example that fires, an example that stays quiet and the fix for each
-rule are in [docs/rules.md](https://github.com/cvas22/mcp-sift/blob/main/docs/rules.md), generated from
+rule are in [docs/rules.md](https://github.com/cvas22/decascan/blob/main/docs/rules.md), generated from
 the rules and their test samples.
 
 | List | Rule | What fires |
@@ -380,7 +384,7 @@ the rules and their test samples.
 | | `WEB09-002` | A broad `except: pass` / empty `catch {}` swallows errors. |
 | **WEB10** SSRF | `WEB10-001` | An HTTP client is called with a URL taken from the request. |
 
-Categories no static scan can establish are reported by `mcp-sift standards` as *not static* rather
+Categories no static scan can establish are reported by `decascan standards` as *not static* rather
 than silently skipped: **LLM04** data and model poisoning, **LLM08** vector and embedding weaknesses,
 **LLM09** misinformation, **WEB04** insecure design, and **WEB06** vulnerable components (use
 `pip-audit` or `osv-scanner`).
@@ -423,7 +427,7 @@ to run in CI. A parameter constrained to an `enum`/`Literal` never taints, and a
 inline inside the call (`'echo ' + shlex.quote(cmd)`) is not recognised, so that form is still reported.
 
 **TypeScript/JavaScript is parsed lexically, not with a real AST.** It deliberately avoids a
-Node/`tsc` dependency so that `pip install mcp-sift` is the entire install story. The parser is
+Node/`tsc` dependency so that `pip install decascan` is the entire install story. The parser is
 brace-aware — it pulls complete zod and JSON Schema literals out of source, and it understands both
 the high-level `server.tool(name, schema, handler)` shape and the low-level
 `setRequestHandler(CallToolRequestSchema, …)` dispatcher. **It will miss aliased imports and
@@ -481,7 +485,7 @@ Linux, Windows, macOS and several Pythons, and the release workflow re-runs it b
 uv venv --python 3.12
 uv pip install -e ".[dev]"
 pytest                                   # the unit tests
-pytest --cov=mcp_sift                    # with coverage (CI enforces the floor in pyproject.toml)
+pytest --cov=decascan                    # with coverage (CI enforces the floor in pyproject.toml)
 ruff check .                             # lint
 python scripts/generate_rule_docs.py --check   # docs/rules.md matches the rules
 uv build                                 # wheel and sdist into dist/
@@ -490,7 +494,7 @@ python scripts/generate_assets.py        # redraw the README's terminal screensh
 
 The same checks run in CI; run them before opening a pull request.
 
-Rules live in `src/mcp_sift/rules/`: one module per MCP risk, plus `llm_top10.py` and `web_top10.py`
+Rules live in `src/decascan/rules/`: one module per MCP risk, plus `llm_top10.py` and `web_top10.py`
 for the other two lists. A rule is a function from a
 `ScanContext` to `Finding`s, registered with a decorator — see `rules/base.py`. Parsers normalize
 every language into the shared vocabulary in `parsers/common.py`, so rules never care whether a
@@ -509,7 +513,7 @@ ids must be unique across lists.
 **Refreshing the cached catalog.** After adding or renaming a rule:
 
 ```bash
-mcp-sift standards --export src/mcp_sift/data/top10
+decascan standards --export src/decascan/data/top10
 ```
 
 A test fails when the snapshot and the code disagree.
@@ -518,10 +522,10 @@ A test fails when the snapshot and the code disagree.
 
 | | |
 |--|--|
-| [docs/rules.md](https://github.com/cvas22/mcp-sift/blob/main/docs/rules.md) | Every rule: severity, CWE, what fires and what stays quiet, and the fix |
-| [docs/standards.md](https://github.com/cvas22/mcp-sift/blob/main/docs/standards.md) | The three Top 10 lists, auto-detection, how findings combine, the cached catalog |
-| [docs/ci.md](https://github.com/cvas22/mcp-sift/blob/main/docs/ci.md) | The GitHub Action, pre-commit, and recipes for other CI systems |
-| [CHANGELOG.md](https://github.com/cvas22/mcp-sift/blob/main/CHANGELOG.md) | What changed |
+| [docs/rules.md](https://github.com/cvas22/decascan/blob/main/docs/rules.md) | Every rule: severity, CWE, what fires and what stays quiet, and the fix |
+| [docs/standards.md](https://github.com/cvas22/decascan/blob/main/docs/standards.md) | The three Top 10 lists, auto-detection, how findings combine, the cached catalog |
+| [docs/ci.md](https://github.com/cvas22/decascan/blob/main/docs/ci.md) | The GitHub Action, pre-commit, and recipes for other CI systems |
+| [CHANGELOG.md](https://github.com/cvas22/decascan/blob/main/CHANGELOG.md) | What changed |
 
 ## Contributing
 
@@ -530,13 +534,13 @@ Maintained by Srinivas Chippagiri ([@cvas22](https://github.com/cvas22)).
 Work on a branch and open a pull request against `main`. CI must pass: lint, the unit tests with the
 coverage floor, the fixture scans, and the wheel check. Add tests with the change, and update the docs
 and `CHANGELOG.md` when behaviour changes. Rules, parsers, the pipeline and the release metadata have
-code owners (see [.github/CODEOWNERS](https://github.com/cvas22/mcp-sift/blob/main/.github/CODEOWNERS));
+code owners (see [.github/CODEOWNERS](https://github.com/cvas22/decascan/blob/main/.github/CODEOWNERS));
 GitHub asks them for a review automatically.
 
 ## Status
 
 v0.1, pre-release. Aligned to the OWASP MCP Top 10 v0.1, the Top 10 for LLM Applications 2025, and
-the web Top 10 2021. The package and command are still named `mcp-sift`. Not yet an OWASP project.
+the web Top 10 2021. The package and command are still named `decascan`. Not yet an OWASP project.
 
 ## License
 

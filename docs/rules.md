@@ -5,7 +5,7 @@ Top 10 (2021) follow. Every rule maps to a risk in exactly one of the lists and 
 score. Confidence below 1.0 means the rule matches a *pattern* that is usually a vulnerability, not
 a proof of one — read the finding before you act on it.
 
-Suppress a reviewed finding with `mcp-sift:ignore` on the offending line.
+Suppress a reviewed finding with `decascan:ignore` on the offending line.
 
 ---
 

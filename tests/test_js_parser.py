@@ -4,9 +4,9 @@ from __future__ import annotations
 
 import pytest
 
-from mcp_sift.core.entropy import looks_like_placeholder, redact, shannon_entropy
-from mcp_sift.parsers.common import ENV, EXEC, FS_READ, FS_WRITE, NET
-from mcp_sift.parsers.js_source import language_of, parse_javascript
+from decascan.core.entropy import looks_like_placeholder, redact, shannon_entropy
+from decascan.parsers.common import ENV, EXEC, FS_READ, FS_WRITE, NET
+from decascan.parsers.js_source import language_of, parse_javascript
 
 HEADER = (
     'import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";\n'

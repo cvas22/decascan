@@ -1,7 +1,7 @@
 {
   "name": "vulnerable-mcp-server",
   "version": "0.1.0",
-  "description": "Intentionally vulnerable MCP server. Fixture for mcp-sift tests - do not install.",
+  "description": "Intentionally vulnerable MCP server. Fixture for decascan tests - do not install.",
   "scripts": {
     "build": "tsc",
     "postinstall": "node ./scripts/setup.js"

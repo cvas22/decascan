@@ -6,9 +6,9 @@ import re
 
 import pytest
 
-from mcp_sift.core.detect import _root_modules
-from mcp_sift.core.standards import RISK_NAMES, RISK_STANDARD, STANDARDS, get_standard
-from mcp_sift.rules._scan import (
+from decascan.core.detect import _root_modules
+from decascan.core.standards import RISK_NAMES, RISK_STANDARD, STANDARDS, get_standard
+from decascan.rules._scan import (
     SourceFile,
     call_args,
     calls,

@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "mcp-sift"
+name = "decascan"
 version = "0.1.0"
 description = "Offline OWASP Top 10 scanner (MCP, LLM applications, web) for Python and TypeScript"
 readme = "README.md"
@@ -35,14 +35,14 @@ dev = [
 ]
 
 [project.scripts]
-mcp-sift = "mcp_sift.cli:main"
+decascan = "decascan.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/cvas22/mcp-sift"
-Issues = "https://github.com/cvas22/mcp-sift/issues"
+Homepage = "https://github.com/cvas22/decascan"
+Issues = "https://github.com/cvas22/decascan/issues"
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/mcp_sift"]
+packages = ["src/decascan"]
 
 [tool.hatch.build.targets.sdist]
 # Hatch honours .gitignore but not .git/info/exclude, so local tooling output (graphify-out/) and the
@@ -53,7 +53,7 @@ exclude = ["/graphify-out", "/uv.lock", "/dist", "/.venv"]
 testpaths = ["tests"]
 
 [tool.coverage.run]
-source = ["mcp_sift"]
+source = ["decascan"]
 
 [tool.coverage.report]
 # Measured at 91% when this gate was added; the floor leaves room for a small untested change but
@@ -74,7 +74,7 @@ select = ["E", "F", "I", "UP", "B"]
 
 [tool.ruff.lint.per-file-ignores]
 # These modules are tables of regular expressions, which cannot be wrapped without changing them.
-"src/mcp_sift/rules/llm_top10.py" = ["E501"]
-"src/mcp_sift/rules/web_top10.py" = ["E501"]
+"src/decascan/rules/llm_top10.py" = ["E501"]
+"src/decascan/rules/web_top10.py" = ["E501"]
 # Test samples are source code held in strings; wrapping them would change what is tested.
 "tests/*.py" = ["E501"]

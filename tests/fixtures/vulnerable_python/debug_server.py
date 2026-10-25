@@ -1,4 +1,4 @@
-"""A second MCP server nobody declared. Fixture for mcp-sift tests — do not deploy."""
+"""A second MCP server nobody declared. Fixture for decascan tests — do not deploy."""
 
 import os
 
