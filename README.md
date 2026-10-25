@@ -14,10 +14,15 @@ No API key. No network calls. No account. `mcp-sift scan .` and you have your an
 ## Example run
 
 A real scan of `tests/fixtures/vulnerable_ts` — a 30-line TypeScript MCP server. Fifteen findings in
-under 10 ms. Reproduce it yourself with the command below; nothing here is mocked up.
+about 10 ms. Reproduce it yourself with the command below. Findings are printed most severe first;
+the first six are shown and the other nine are summarised at the end.
 
 ```console
 $ mcp-sift scan tests/fixtures/vulnerable_ts
+
+Auto-detected: mcp (depends on @modelcontextprotocol/sdk, defines MCP tools or a server, imports
+@modelcontextprotocol/sdk/server/mcp.js)
+Override with --standard mcp|llm|web|all.
 
  CRITICAL  MCP01 Token Mismanagement & Secret Exposure  [MCP01-001]
   GitHub token committed to source
@@ -80,20 +85,19 @@ $ mcp-sift scan tests/fixtures/vulnerable_ts
   — not just at connection setup.
   CWE-306 · confidence 90%
 
- HIGH  MCP09 Shadow MCP Servers  [MCP09-002]
-  Port 9090 is bound in code but declared in no manifest
-  src/server.ts:30
-  │ httpServer.listen(9090);
-  `src/server.ts` listens on port 9090, which appears in none of the 1 manifest(s) scanned
-  (declared: [8080]). An operator reading the manifest has no idea this listener exists, so
-  it will not be firewalled, monitored, or reviewed.
-  Fix: Declare port 9090 in the manifest, or remove the listener. If it is a
-  development-only endpoint, gate it behind an explicit environment flag that is off by
-  default.
-  CWE-1059 · confidence 70%
+ HIGH  MCP02 Privilege Escalation via Scope Creep  [MCP02-001]
+  Tool `write_config` can write/delete files, which `mcp.json` does not grant
+  src/server.ts:21
+  │ fs.writeFileSync(path, body);
+  `fs.writeFileSync` at src/server.ts:21 exercises the `fs:write` capability, but the declared
+  server scopes ['read:files'] do not cover it. The client authorized this server on the strength
+  of those scopes; the implementation quietly exceeds them.
+  Fix: Either drop the `fs:write` operation, or declare the matching scope in `mcp.json` so the
+  grant is honest — and expect clients to review it.
+  CWE-269 · confidence 85%
 
-  [ 5 more HIGH (fs:write beyond scope, wildcard CORS, tainted path write, git dependency,
-    install hook) and 4 MEDIUM (no schema, unvalidated param, floating deps, no audit log)
+  [ 5 more HIGH (install hook, git dependency, tainted path write, wildcard CORS, undeclared
+    port 9090) and 4 MEDIUM (no schema, unvalidated param, floating deps, no audit log)
     omitted here ]
 
 Severity  Count
@@ -101,7 +105,7 @@ CRITICAL      5
 HIGH          6
 MEDIUM        4
 
-15 finding(s) across 3 files (26 rules, 0.00s)
+15 finding(s) across 3 files (26 rules, 0.01s)
 ```
 
 Four things that run demonstrates, in order of how much they matter:
@@ -210,7 +214,7 @@ $ mcp-sift scan PATH [options]
 | `--rule ID` | all | Run only these rule ids. Repeatable. |
 | `--disable ID` | none | Skip these rule ids. Repeatable. |
 | `--exclude DIR` | see below | Extra directory names to skip, on top of the defaults. Repeatable. |
-| `--repo-root DIR` | auto | Repository root, so SARIF and annotations carry repo-relative paths when `PATH` is a subdirectory. Defaults to `$GITHUB_WORKSPACE`, else the nearest `.git`. |
+| `--repo-root DIR` | auto | Repository root, so SARIF and annotations carry repo-relative paths when `PATH` is a subdirectory. Also `MCP_SIFT_REPO_ROOT`. Defaults to `$GITHUB_WORKSPACE`, else the nearest `.git`. |
 | `--keep-duplicates` | off | Report a defect once per Top 10 list instead of merging it into one finding that lists the others under "Also maps to". |
 | `--no-fail` | off | Always exit `0`, whatever is found. |
 
@@ -235,6 +239,7 @@ At `-v` the log shows the request, file and rule counts, which lists were chosen
 filtered or merged, the slowest rules, the report destination and the exit decision. At `-vv` it adds
 every file read, manifest, dependency file and rule, plus the effective configuration. Slow files
 and slow rules are warnings.
+
 The scanner reads files under `PATH` but does not follow symlinks, and it does not read `.gitignore`;
 use `--exclude` for directories you want skipped.
 
@@ -398,7 +403,8 @@ manifest, config, and source.
 A security tool nobody trusts is a security tool nobody runs, so the rules are tuned to stay quiet:
 
 - stdio servers are not nagged about authentication
-- placeholders (`${API_KEY}`, `changeme`, `xxxx`) and `.env.example` files don't fire
+- placeholders (`${API_KEY}`, `changeme`, `xxxx`) don't fire, and a real-looking credential in a
+  template file (`.env.example`, `.sample`, `.template`) is reported only at LOW severity
 - capabilities the manifest *does* grant are not reported
 - a finding already reported with force by a precise rule isn't repeated by a vaguer one
 
