@@ -108,3 +108,19 @@ def test_utf8_console_keeps_typographic_punctuation(tmp_path):
 
     rendered = (tmp_path / "out.txt").read_text(encoding="utf-8")
     assert "—" in rendered and "│" in rendered
+
+
+def test_github_output_survives_a_legacy_console(monkeypatch):
+    """The annotations carry an arrow that cp1252 cannot encode; stdout must not raise."""
+    import io
+
+    from decascan import cli
+
+    raw = io.BytesIO()
+    console = io.TextIOWrapper(raw, encoding="cp1252", errors="strict")
+    monkeypatch.setattr(cli.sys, "stdout", console)
+    monkeypatch.setattr(cli.click, "echo", lambda text: console.write(text))
+    result = scan(FIXTURES / "vulnerable_python")
+    cli._emit(result, "github", None)
+    console.flush()
+    assert raw.getvalue()

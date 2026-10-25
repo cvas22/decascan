@@ -231,7 +231,9 @@ def _emit(result, output: str, output_file: Path | None) -> None:
             output_file.write_text(text, encoding="utf-8")
             size = output_file.stat().st_size  # what is on disk, which can differ by line endings
         else:
-            click.echo(text)
+            # A legacy console codepage (cp1252 on Windows) cannot encode every character in a message.
+            encoding = getattr(sys.stdout, "encoding", None) or "utf-8"
+            click.echo(text.encode(encoding, errors="replace").decode(encoding))
             size = len(text.encode("utf-8"))
     log.info(
         "report written",
