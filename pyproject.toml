@@ -44,6 +44,11 @@ Issues = "https://github.com/cvas22/mcp-sift/issues"
 [tool.hatch.build.targets.wheel]
 packages = ["src/mcp_sift"]
 
+[tool.hatch.build.targets.sdist]
+# Hatch honours .gitignore but not .git/info/exclude, so local tooling output (graphify-out/) and the
+# lockfile would otherwise ship in the source distribution.
+exclude = ["/graphify-out", "/uv.lock", "/dist", "/.venv"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 
