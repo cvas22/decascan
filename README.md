@@ -205,6 +205,23 @@ $ mcp-sift scan PATH [options]
 | `--exclude DIR` | see below | Extra directory names to skip, on top of the defaults. Repeatable. |
 | `--no-fail` | off | Always exit `0`, whatever is found. |
 
+**Logging.** Off by default, so a plain run prints only the report. Diagnostics always go to stderr
+or a file, never stdout, so `-o json | jq` keeps working with logging on. Global options go before the
+command:
+
+| Option | Env var | What it does |
+|--------|---------|--------------|
+| `-v` / `-vv` | `MCP_SIFT_VERBOSE` | `-v` logs progress (lists chosen and why, files, findings, time); `-vv` adds per-rule timings, skipped files and suppressed findings. |
+| `--log-file PATH` | `MCP_SIFT_LOG_FILE` | Write the log to a file instead of stderr. |
+| `--log-format {text,json}` | `MCP_SIFT_LOG_FORMAT` | `json` writes one JSON object per line (`ts`, `level`, `logger`, `msg`, plus fields). |
+
+```bash
+mcp-sift -v scan .                                  # progress on stderr
+mcp-sift -vv --log-format json --log-file scan.jsonl scan . -o json -f report.json
+```
+
+As a library, the `mcp_sift` logger is silent until you configure it.
+
 Default excludes (always skipped): `.git`, `node_modules`, `__pycache__`, `.venv`, `venv`,
 `dist`, `build`, `site-packages`, and similar build/cache directories.
 

@@ -15,6 +15,8 @@ from dataclasses import dataclass
 from ..core.config import SOURCE_SUFFIXES
 from ..core.context import ScanContext
 from ..core.findings import Finding, Severity
+from ..core.lines import line_of, line_text
+from ..core.log import get_logger
 
 _TEST_DIRS = {"test", "tests", "__tests__", "spec", "specs", "fixtures", "e2e", "testdata"}
 _COMMENT_PREFIXES = ("#", "//", "*", "/*")
@@ -49,20 +51,26 @@ def is_test_path(rel: str) -> bool:
     )
 
 
+# A line this long is minified or generated output, not code anyone reviews. The lexical rules skip
+# such files: every match attempt on a megabyte-long line is slow, and none of the matches is useful.
+MAX_LINE_CHARS = 5000
+
+log = get_logger("rules")
+
+
+def _is_minified(text: str) -> bool:
+    return any(len(line) > MAX_LINE_CHARS for line in text.split("\n"))
+
+
 def source_files(ctx: ScanContext) -> Iterator[SourceFile]:
     for rel in ctx.files:
         if not rel.lower().endswith(SOURCE_SUFFIXES) or is_test_path(rel):
             continue
-        yield SourceFile(rel, ctx.text(rel), not rel.lower().endswith(".py"))
-
-
-def line_of(text: str, index: int) -> int:
-    return text.count("\n", 0, index) + 1
-
-
-def line_text(text: str, line_no: int) -> str:
-    lines = text.splitlines()
-    return lines[line_no - 1] if 0 < line_no <= len(lines) else ""
+        text = ctx.text(rel)
+        if _is_minified(text):
+            log.debug("file skipped by pattern rules: minified or generated", extra={"file": rel})
+            continue
+        yield SourceFile(rel, text, not rel.lower().endswith(".py"))
 
 
 def is_comment(line: str) -> bool:

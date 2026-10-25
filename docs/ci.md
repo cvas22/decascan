@@ -123,6 +123,13 @@ jobs:
       - run: pip install mcp-sift && mcp-sift scan . --fail-on high
 ```
 
+## Keeping a log of the run
+
+Add `-vv --log-format json --log-file mcp-sift.log.jsonl` before `scan` to record which lists were
+chosen and why, how long each rule took, and which files were skipped, then upload the file as a
+build artifact. The report (`-o json`, `-o sarif`) is separate and unaffected. The same settings are
+available as `MCP_SIFT_VERBOSE`, `MCP_SIFT_LOG_FORMAT` and `MCP_SIFT_LOG_FILE` environment variables.
+
 ## Choosing a gate
 
 - Start with `--fail-on high` and `--no-fail` on a first run to see the baseline, then tighten.
