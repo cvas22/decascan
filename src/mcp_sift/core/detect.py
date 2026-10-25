@@ -11,6 +11,9 @@ from __future__ import annotations
 import re
 
 from .context import ScanContext
+from .log import get_logger
+
+log = get_logger("detect")
 
 # Package names (pypi / npm), matched against declared dependencies and import statements.
 _SIGNALS: dict[str, tuple[str, ...]] = {
@@ -83,4 +86,10 @@ def detect_standards(ctx: ScanContext) -> dict[str, list[str]]:
                 standard = lookup.get(root)
                 if standard and root not in weak:
                     add(standard, f"imports {module}")
+                elif standard:
+                    log.debug("import ignored: name too generic", extra={"file": rel, "imported": module})
+    for standard, reasons in sorted(evidence.items()):
+        log.debug("list detected", extra={"standard": standard, "evidence": "; ".join(reasons)})
+    if not evidence:
+        log.debug("no list recognised from imports or dependencies")
     return evidence

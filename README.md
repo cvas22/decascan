@@ -224,6 +224,11 @@ mcp-sift -vv --log-format json --log-file scan.jsonl scan . -o json -f report.js
 
 As a library, the `mcp_sift` logger is silent until you configure it.
 
+Every event, its level and its fields are listed in
+[docs/logging.md](https://github.com/cvas22/mcp-sift/blob/main/docs/logging.md): at `-v` the run's
+request, file and rule counts, which lists were chosen and why, what was filtered or merged, the
+slowest rules, the report destination and the exit decision; at `-vv` every file read, manifest,
+dependency file and rule, plus the effective configuration. Slow files and rules are warnings.
 The scanner reads files under `PATH` but does not follow symlinks, and it does not read `.gitignore`;
 use `--exclude` for directories you want skipped.
 
