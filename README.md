@@ -126,6 +126,19 @@ and so do the real `mcp-server-fetch` and `mcp-server-time`.
 pip install mcp-sift
 ```
 
+> **Pre-release note:** v0.1 is not on PyPI yet, so the command above will not resolve until
+> the first release is published. Until then, install from a clone:
+>
+> ```bash
+> git clone https://github.com/cvas22/mcp-sift && cd mcp-sift
+> pip install .          # or: pip install -e ".[dev]" to hack on it
+> ```
+>
+> Either way `pip` puts a `mcp-sift` launcher in your Python `Scripts/` (Windows) or `bin/`
+> (macOS/Linux) directory. On macOS/Linux that's usually already on `PATH`; on Windows, if
+> `mcp-sift` isn't found afterward, add that `Scripts\` directory to `PATH`, or run it with
+> `python -m mcp_sift.cli ...` in the meantime.
+
 ## Use
 
 ```bash
@@ -146,9 +159,57 @@ drops into CI unchanged:
     sarif_file: mcp-sift.sarif
 ```
 
-Suppress a finding you've reviewed by putting `mcp-sift:ignore` on the line.
+Suppress a finding you've reviewed by putting a suppression marker on the same source line —
+any of `mcp-sift:ignore`, `mcp-sift: ignore`, or `nosec mcp-sift`.
+
+## CLI reference
+
+Three commands: `scan`, `rules` and `standards`. `PATH` may be a directory **or a single file**.
+
+```console
+$ mcp-sift scan PATH [options]
+```
+
+| Option | Default | What it does |
+|--------|---------|--------------|
+| `-o, --output {pretty,json,sarif}` | `pretty` | Output format. `sarif` uploads to GitHub Code Scanning. |
+| `-f, --output-file PATH` | stdout | Write output to a file instead of stdout. |
+| `--fail-on {critical,high,medium,low,info}` | `high` | Exit non-zero when a finding at this severity or above is present. |
+| `--min-severity {critical,high,medium,low,info}` | `info` | Drop findings below this severity from the report entirely. |
+| `-s, --standard {mcp,llm,web}` | all | Top 10 list(s) to scan against. Repeatable. |
+| `--rule ID` | all | Run only these rule ids. Repeatable. |
+| `--disable ID` | none | Skip these rule ids. Repeatable. |
+| `--exclude DIR` | see below | Extra directory names to skip, on top of the defaults. Repeatable. |
+| `--no-fail` | off | Always exit `0`, whatever is found. |
+
+Default excludes (always skipped): `.git`, `node_modules`, `__pycache__`, `.venv`, `venv`,
+`dist`, `build`, `site-packages`, and similar build/cache directories.
+
+**Exit codes** — designed for CI:
+
+| Code | Meaning |
+|------|---------|
+| `0` | Clean, or nothing at/above `--fail-on` (or `--no-fail` was set) |
+| `1` | A finding at or above `--fail-on` is present |
+| `2` | Bad invocation (unknown rule id, missing path, …) |
+
+`mcp-sift rules [-s LIST]` lists every built-in rule and the OWASP risk it maps to.
+`mcp-sift standards` shows each Top 10 list and which of its categories have rules.
 
 ## What it checks
+
+Three OWASP Top 10 lists, scanned together by default and grouped by list and category in the
+output (`--standard` narrows it):
+
+| List (`--standard`) | Covered | Not statically detectable |
+|---------------------|---------|---------------------------|
+| OWASP MCP Top 10 (`mcp`) | all 10, 26 rules | none |
+| OWASP Top 10 for LLM Applications 2025 (`llm`) | 7 of 10 | LLM04 data/model poisoning, LLM08 vector/embedding weaknesses, LLM09 misinformation |
+| OWASP Top 10 2021 (`web`) | 8 of 10 | A04 insecure design, A06 vulnerable components (use pip-audit or osv-scanner) |
+
+The LLM and web rules are lexical (regex plus a one-hop request-taint pass), so they carry lower
+confidence than the MCP rules' AST analysis and skip test directories. Everything below is about the
+MCP rules.
 
 All ten OWASP MCP Top 10 risks, across 26 rules. Findings carry a CWE id and a confidence score, and
 every one tells you how to fix it. Full detail per rule in

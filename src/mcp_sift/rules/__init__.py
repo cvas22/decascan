@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from . import (  # noqa: F401  (imported for the registration side effect)
+    llm_top10,
     mcp01_secrets,
     mcp02_scope,
     mcp03_tool_poisoning,
@@ -13,6 +14,7 @@ from . import (  # noqa: F401  (imported for the registration side effect)
     mcp08_audit,
     mcp09_shadow_servers,
     mcp10_context,
+    web_top10,
 )
 from .base import REGISTRY, Rule, rule
 

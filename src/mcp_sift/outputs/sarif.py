@@ -5,8 +5,9 @@ from __future__ import annotations
 import hashlib
 import json
 
-from ..core.findings import MCP_RISKS, OWASP_MCP_TOP10_VERSION, Finding, Severity
+from ..core.findings import Finding, Severity
 from ..core.scanner import ScanResult
+from ..core.standards import RISK_NAMES, STANDARDS
 from ..rules import all_rules
 
 SCHEMA = "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/main/sarif-2.1/schema/sarif-schema-2.1.0.json"
@@ -35,9 +36,10 @@ def _fingerprint(finding: Finding) -> str:
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()[:32]
 
 
-def _rule_descriptors(version: str) -> list[dict]:
+def _rule_descriptors() -> list[dict]:
     descriptors = []
     for rule in all_rules():
+        standard = STANDARDS[rule.standard]
         descriptors.append(
             {
                 "id": rule.id,
@@ -49,13 +51,14 @@ def _rule_descriptors(version: str) -> list[dict]:
                     "text": rule.description,
                     "markdown": (
                         f"**{rule.name}**\n\n{rule.description}\n\n"
-                        f"Maps to OWASP MCP Top 10 **{rule.mcp_id}: "
-                        f"{MCP_RISKS.get(rule.mcp_id, '')}** (v{version})."
+                        f"Maps to {standard.name} **{rule.mcp_id}: "
+                        f"{RISK_NAMES.get(rule.mcp_id, '')}** (v{standard.version})."
                     ),
                 },
                 "properties": {
-                    "tags": ["security", "mcp", f"OWASP-MCP-{rule.mcp_id}"],
+                    "tags": ["security", rule.standard, f"OWASP-{rule.mcp_id}"],
                     "mcpId": rule.mcp_id,
+                    "standard": rule.standard,
                 },
             }
         )
@@ -88,6 +91,7 @@ def to_sarif(result: ScanResult, version: str = "0.1.0") -> dict:
                 "properties": {
                     "security-severity": _SECURITY_SEVERITY[finding.severity],
                     "mcpId": finding.mcp_id,
+                    "standard": finding.standard,
                     "owaspRisk": finding.risk_name,
                     "confidence": finding.confidence,
                     "cwe": finding.cwe_id,
@@ -106,7 +110,7 @@ def to_sarif(result: ScanResult, version: str = "0.1.0") -> dict:
                         "version": version,
                         "informationUri": TOOL_URI,
                         "semanticVersion": version,
-                        "rules": _rule_descriptors(OWASP_MCP_TOP10_VERSION),
+                        "rules": _rule_descriptors(),
                     }
                 },
                 "results": results,

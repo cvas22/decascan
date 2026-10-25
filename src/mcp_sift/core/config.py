@@ -39,6 +39,8 @@ PLACEHOLDER_FILE_HINTS = (".env.example", ".env.sample", ".env.template", "examp
 class ScanConfig:
     fail_on: Severity = Severity.HIGH
     excludes: tuple[str, ...] = DEFAULT_EXCLUDES
+    # Which Top 10 lists to scan against. None = all of them.
+    standards: frozenset[str] | None = None
     enabled_rules: frozenset[str] | None = None  # None = all
     disabled_rules: frozenset[str] = field(default_factory=frozenset)
     min_severity: Severity = Severity.INFO

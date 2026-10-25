@@ -10,6 +10,7 @@ from ..rules import all_rules
 from .config import ScanConfig
 from .context import ScanContext, build_context
 from .findings import Finding, Severity
+from .standards import STANDARDS
 
 SUPPRESSION_MARKERS = ("mcp-sift:ignore", "mcp-sift: ignore", "nosec mcp-sift")
 
@@ -21,6 +22,7 @@ class ScanResult:
     rules_run: int
     duration_seconds: float
     errors: list[str]
+    standards: tuple[str, ...] = ()
 
     def counts_by_severity(self) -> dict[str, int]:
         counts = {s.value: 0 for s in Severity}
@@ -42,6 +44,14 @@ def _is_suppressed(ctx: ScanContext, finding: Finding) -> bool:
     return any(marker in line for marker in SUPPRESSION_MARKERS)
 
 
+def active_standards(ctx: ScanContext) -> frozenset[str]:
+    # The MCP rules that describe a whole-server property already gate themselves on
+    # `ctx.is_mcp_server`, so running them on any codebase is safe.
+    if ctx.config.standards is not None:
+        return ctx.config.standards
+    return frozenset(STANDARDS)
+
+
 def scan(root: Path, config: ScanConfig | None = None) -> ScanResult:
     config = config or ScanConfig()
     started = time.perf_counter()
@@ -49,7 +59,8 @@ def scan(root: Path, config: ScanConfig | None = None) -> ScanResult:
     ctx = build_context(root, config)
     findings: list[Finding] = []
     errors: list[str] = []
-    rules = [r for r in all_rules() if config.rule_enabled(r.id)]
+    active = active_standards(ctx)
+    rules = [r for r in all_rules() if r.standard in active and config.rule_enabled(r.id)]
 
     for rule in rules:
         try:
@@ -82,4 +93,5 @@ def scan(root: Path, config: ScanConfig | None = None) -> ScanResult:
         rules_run=len(rules),
         duration_seconds=time.perf_counter() - started,
         errors=errors,
+        standards=tuple(sorted(active)),
     )

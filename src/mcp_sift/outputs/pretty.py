@@ -14,7 +14,7 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
-from ..core.findings import MCP_RISKS, Finding, Severity
+from ..core.findings import Finding, Severity
 from ..core.scanner import ScanResult
 
 _STYLE = {
@@ -124,7 +124,7 @@ def _print_finding(finding: Finding, writer: _Writer) -> None:
     header = Text()
     header.append(f" {finding.severity.value.upper()} ", style=_STYLE[finding.severity])
     header.append(f" {finding.mcp_id} ", style="bold")
-    header.append(writer.safe(MCP_RISKS.get(finding.mcp_id, "")), style="dim")
+    header.append(writer.safe(finding.risk_name), style="dim")
     header.append(f"  [{finding.rule_id}]", style="dim")
     writer.console.print(header)
 

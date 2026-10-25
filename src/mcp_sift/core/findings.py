@@ -5,6 +5,8 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from enum import Enum
 
+from .standards import MCP, RISK_NAMES, RISK_STANDARD
+
 _SEVERITY_ORDER = ["info", "low", "medium", "high", "critical"]
 
 
@@ -34,22 +36,9 @@ class Severity(str, Enum):
             raise ValueError(f"unknown severity {raw!r} (expected one of: {valid})") from exc
 
 
-# Human-readable names for the OWASP MCP Top 10, keyed by risk id. Findings carry the id;
-# outputs render the title. Pinned to the MCP Top 10 version in OWASP_MCP_TOP10_VERSION.
-OWASP_MCP_TOP10_VERSION = "0.1"
-
-MCP_RISKS: dict[str, str] = {
-    "MCP01": "Token Mismanagement & Secret Exposure",
-    "MCP02": "Privilege Escalation via Scope Creep",
-    "MCP03": "Tool Poisoning",
-    "MCP04": "Supply Chain / Dependency Tampering",
-    "MCP05": "Command Injection & Execution",
-    "MCP06": "Prompt Injection via Contextual Payloads",
-    "MCP07": "Insufficient Authentication & Authorization",
-    "MCP08": "Lack of Audit & Telemetry",
-    "MCP09": "Shadow MCP Servers",
-    "MCP10": "Context Injection & Over-Sharing",
-}
+# Kept for callers that predate multi-standard scanning; see core/standards.py for the full set.
+OWASP_MCP_TOP10_VERSION = MCP.version
+MCP_RISKS: dict[str, str] = MCP.risks
 
 
 @dataclass(frozen=True)
@@ -57,7 +46,8 @@ class Finding:
     """One vulnerability at one location.
 
     `rule_id` identifies the check that fired (stable, used for suppression and SARIF rule
-    definitions); `mcp_id` identifies the OWASP risk class it maps to.
+    definitions); `mcp_id` identifies the OWASP risk class it maps to. The field keeps its original
+    name but holds the risk id of whichever standard the rule belongs to (`MCP05`, `LLM01`, ...).
     """
 
     rule_id: str
@@ -75,7 +65,11 @@ class Finding:
 
     @property
     def risk_name(self) -> str:
-        return MCP_RISKS.get(self.mcp_id, "Unknown risk")
+        return RISK_NAMES.get(self.mcp_id, "Unknown risk")
+
+    @property
+    def standard(self) -> str:
+        return RISK_STANDARD.get(self.mcp_id, "mcp")
 
     @property
     def sort_key(self) -> tuple:
@@ -84,6 +78,7 @@ class Finding:
     def to_dict(self) -> dict:
         return {
             "rule_id": self.rule_id,
+            "standard": self.standard,
             "mcp_id": self.mcp_id,
             "risk_name": self.risk_name,
             "severity": self.severity.value,
