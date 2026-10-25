@@ -1,11 +1,13 @@
 # mcp-sift
 
-**A security scanner for Model Context Protocol servers, mapped to the OWASP MCP Top 10.**
+**An offline security scanner for Python and TypeScript code, mapped to three OWASP Top 10 lists:
+the MCP Top 10, the Top 10 for LLM Applications, and the web Top 10.**
 
 MCP servers run with the privileges of the developer who installed them: they read files, call
 internal APIs, and execute commands on behalf of an LLM that anything in its context window can
 influence. `mcp-sift` reads a server's manifest, config, and source and tells you where that trust
-is misplaced — before you ship it.
+is misplaced — before you ship it. The same scan also checks the application code around it for
+the LLM-specific and classic web risks, and groups every finding by list and category.
 
 No API key. No network calls. No account. `mcp-sift scan .` and you have your answer.
 
@@ -145,8 +147,16 @@ pip install mcp-sift
 mcp-sift scan ./server              # human-readable
 mcp-sift scan ./server -o json      # for pipelines
 mcp-sift scan ./server -o sarif -f results.sarif   # for GitHub Code Scanning
+mcp-sift scan ./app -s llm -s web   # only the LLM and web Top 10 lists
 mcp-sift rules                      # what it checks and why
+mcp-sift standards                  # each Top 10 list and which categories have rules
 ```
+
+By default (`--standard auto`) the lists are **auto-detected** from the code's imports and declared
+dependencies: an MCP server gets the MCP list, a Flask or Express app the web list, a LangChain or
+OpenAI app the LLM list, and the report says what it detected and why. If nothing is recognised, every
+list runs. Choose explicitly with `-s mcp`, `-s llm`, `-s web` (repeatable) or `-s all`; `auto`
+cannot be combined with other values.
 
 `mcp-sift scan` exits `1` when it finds something at or above `--fail-on` (default: `high`), so it
 drops into CI unchanged:
@@ -176,7 +186,7 @@ $ mcp-sift scan PATH [options]
 | `-f, --output-file PATH` | stdout | Write output to a file instead of stdout. |
 | `--fail-on {critical,high,medium,low,info}` | `high` | Exit non-zero when a finding at this severity or above is present. |
 | `--min-severity {critical,high,medium,low,info}` | `info` | Drop findings below this severity from the report entirely. |
-| `-s, --standard {mcp,llm,web}` | all | Top 10 list(s) to scan against. Repeatable. |
+| `-s, --standard {auto,all,mcp,llm,web}` | `auto` | Top 10 list(s) to scan against. Repeatable; `auto` detects them from imports and dependencies, `all` runs every list. |
 | `--rule ID` | all | Run only these rule ids. Repeatable. |
 | `--disable ID` | none | Skip these rule ids. Repeatable. |
 | `--exclude DIR` | see below | Extra directory names to skip, on top of the defaults. Repeatable. |
@@ -194,12 +204,15 @@ Default excludes (always skipped): `.git`, `node_modules`, `__pycache__`, `.venv
 | `2` | Bad invocation (unknown rule id, missing path, …) |
 
 `mcp-sift rules [-s LIST]` lists every built-in rule and the OWASP risk it maps to.
-`mcp-sift standards` shows each Top 10 list and which of its categories have rules.
+`mcp-sift standards` shows each Top 10 list and which of its categories have rules. With `--json` it
+prints the catalog; `--json --cached` prints the snapshot shipped in the package
+(`src/mcp_sift/data/top10.json`) without loading any rule, and `--export PATH` rewrites a snapshot.
+See [docs/standards.md](https://github.com/cvas22/mcp-sift/blob/main/docs/standards.md).
 
 ## What it checks
 
-Three OWASP Top 10 lists, scanned together by default and grouped by list and category in the
-output (`--standard` narrows it):
+Three OWASP Top 10 lists, auto-detected per codebase by default (or chosen with `--standard`) and
+grouped by list and category in the output:
 
 | List (`--standard`) | Covered | Not statically detectable |
 |---------------------|---------|---------------------------|
@@ -244,6 +257,45 @@ every one tells you how to fix it. Full detail per rule in
 | | `MCP10-002` | Code touches a path holding SSH keys, cloud credentials, or system accounts. |
 | | `MCP10-003` | A file operation is rooted at `/`, a home directory, or a drive root. |
 
+### LLM Applications and web rules
+
+| List | Rule | What fires |
+|------|------|-----------|
+| **LLM01** Prompt Injection | `LLM01-001` | The system message is built with an f-string, `.format()` or concatenation, promoting variable data to the operator's authority. |
+| **LLM02** Sensitive Info Disclosure | `LLM02-001` | An environment variable, key or password is formatted into a prompt. |
+| **LLM03** Supply Chain | `LLM03-001` | `trust_remote_code=True` runs code from the model repository. |
+| | `LLM03-002` | `torch.load` / `joblib.load` without `weights_only=True` deserializes with pickle semantics. |
+| | `LLM03-003` | A hub model is downloaded with no pinned `revision=`. |
+| **LLM05** Improper Output Handling | `LLM05-001` | Model output reaches `eval`/`exec`, a shell, raw HTML or a SQL string. |
+| **LLM06** Excessive Agency | `LLM06-001` | An agent gets a shell/REPL tool, an `allow_dangerous_*` opt-in, or a broad code-executing toolkit. |
+| **LLM07** System Prompt Leakage | `LLM07-001` | A credential value is embedded in a system prompt. |
+| **LLM10** Unbounded Consumption | `LLM10-001` | A completion request sets no `max_tokens` (or equivalent). |
+| **WEB01** Broken Access Control | `WEB01-001` | A request parameter reaches a file open/send call (path traversal). |
+| | `WEB01-002` | CORS allows every origin together with credentials. |
+| | `WEB01-003` | CSRF protection is switched off. |
+| **WEB02** Cryptographic Failures | `WEB02-001` | MD5 or SHA-1 is used (HIGH when it hashes a password). |
+| | `WEB02-002` | TLS certificate or hostname verification is disabled. |
+| | `WEB02-003` | ECB mode, DES/3DES, RC4 or `createCipher`. |
+| | `WEB02-004` | `random` / `Math.random` generates a token, key or nonce. |
+| **WEB03** Injection | `WEB03-001` | SQL assembled by f-string, `%`, `.format()` or concatenation. |
+| | `WEB03-002` | A shell command built from variable data or request input. |
+| | `WEB03-003` | `eval` / `exec` / `new Function` on a non-literal. |
+| | `WEB03-004` | Raw HTML output (`innerHTML`, `mark_safe`, `dangerouslySetInnerHTML`) or template injection. |
+| **WEB05** Misconfiguration | `WEB05-001` | Debug mode enabled in code. |
+| | `WEB05-002` | Wildcard `ALLOWED_HOSTS`, weakened cookie flags, or XML external entities enabled. |
+| **WEB07** Authentication Failures | `WEB07-001` | JWT signature/expiry/audience verification disabled, or the `none` algorithm allowed. |
+| | `WEB07-002` | A hard-coded `SECRET_KEY`, JWT secret or password (redacted in output). |
+| **WEB08** Integrity Failures | `WEB08-001` | `pickle`/`marshal`/`yaml.load` or similar on data. |
+| | `WEB08-002` | `curl ... \| sh` executes an unverified remote script. |
+| **WEB09** Logging Failures | `WEB09-001` | A password, token or key is passed to a log or print call. |
+| | `WEB09-002` | A broad `except: pass` / empty `catch {}` swallows errors. |
+| **WEB10** SSRF | `WEB10-001` | An HTTP client is called with a URL taken from the request. |
+
+Categories no static scan can establish are reported by `mcp-sift standards` as *not static* rather
+than silently skipped: **LLM04** data and model poisoning, **LLM08** vector and embedding weaknesses,
+**LLM09** misinformation, **WEB04** insecure design, and **WEB06** vulnerable components (use
+`pip-audit` or `osv-scanner`).
+
 ## How it works, and where it stops
 
 **Python is parsed with a real AST.** Callees are resolved through the import alias map, so
@@ -272,6 +324,13 @@ computed names in a way the Python parser does not**, and its MCP05 taint is a n
 a proof of flow — reported at lower confidence and marked `proven=false`. Moving TS to the TypeScript
 compiler API is the top item for the next version.
 
+**The LLM and web rules are lexical.** A regex finds the sink, a balanced-parenthesis walk reads its
+arguments, and a one-hop pass marks names assigned directly from a request value (`request.args`,
+`req.body`, ...). There is no data-flow analysis, so a value that reaches a sink through a helper is
+missed, and a similarly named variable can trip a rule. Every such finding carries a confidence below
+1.0. Matches inside string literals, comments, imports and test directories (`tests/`, `test_*.py`,
+`*.spec.ts`, ...) are skipped.
+
 **No dynamic analysis:** the scanner never executes the server it's auditing. Everything is read from
 manifest, config, and source.
 
@@ -284,8 +343,10 @@ A security tool nobody trusts is a security tool nobody runs, so the rules are t
 - capabilities the manifest *does* grant are not reported
 - a finding already reported with force by a precise rule isn't repeated by a vaguer one
 
-`tests/fixtures/clean_python/` is a well-behaved server that must produce zero findings at MEDIUM or
-above; a test enforces it. If a rule change lights it up, the change has a false-positive problem.
+`tests/fixtures/clean_python/` is a well-behaved server, and `tests/fixtures/clean_webllm/` a
+well-behaved web/LLM app; each must produce zero findings and a test enforces it. If a rule change
+lights one up, the change has a false-positive problem. Expect more noise from the lexical LLM and
+web rules than from the MCP rules; the noisiest is `WEB09-002` (swallowed exceptions), which is LOW.
 
 As a check against real code, v0.1 scans clean on the official `mcp-server-fetch` and
 `mcp-server-time` — and does so *having actually read their schemas*, not by failing to parse them.
@@ -300,14 +361,32 @@ uv pip install -e ".[dev]"
 pytest
 ```
 
-Rules live in `src/mcp_sift/rules/`, one module per OWASP risk. A rule is a function from a
+Rules live in `src/mcp_sift/rules/`: one module per MCP risk, plus `llm_top10.py` and `web_top10.py`
+for the other two lists. A rule is a function from a
 `ScanContext` to `Finding`s, registered with a decorator — see `rules/base.py`. Parsers normalize
 every language into the shared vocabulary in `parsers/common.py`, so rules never care whether a
-server is Python or TypeScript.
+server is Python or TypeScript. The pattern-based rules share the helpers in `rules/_scan.py`.
+
+**Adding a rule.** Register it with `@rule(id=..., mcp_id=<risk id>, ...)`, add a case to
+`tests/test_standards.py` (and to the vulnerable fixture if it is a common shape), and add a
+`### <RULE-ID>` section to `docs/rules.md` -- a test fails if any rule is undocumented.
+
+**Adding a Top 10 list.** Define a `Standard` in `core/standards.py` (id, version, risk ids and
+names, and the risks that are `not_static`), add it to `STANDARDS`, and write its rule module. Risk
+ids must be unique across lists.
+
+**Refreshing the cached catalog.** After adding or renaming a rule:
+
+```bash
+mcp-sift standards --export src/mcp_sift/data/top10.json
+```
+
+A test fails when the snapshot and the code disagree.
 
 ## Status
 
-v0.1, pre-release. Aligned to the OWASP MCP Top 10 v0.1 numbering. Not yet an OWASP project.
+v0.1, pre-release. Aligned to the OWASP MCP Top 10 v0.1, the Top 10 for LLM Applications 2025, and
+the web Top 10 2021. The package and command are still named `mcp-sift`. Not yet an OWASP project.
 
 ## License
 

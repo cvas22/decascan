@@ -112,6 +112,7 @@ def render(result: ScanResult, console: Console | None = None, show_info: bool =
         _print_errors(result, writer)
         return
 
+    _print_detection(result, writer)
     console.print()
     for finding in findings:
         _print_finding(finding, writer)
@@ -165,6 +166,14 @@ def _print_summary(result: ScanResult, shown: list[Finding], writer: _Writer) ->
         f"({result.rules_run} rules, {result.duration_seconds:.2f}s)",
         style="dim",
     )
+
+
+def _print_detection(result: ScanResult, writer: _Writer) -> None:
+    if not result.detected:
+        return
+    parts = [f"{sid} ({', '.join(why)})" for sid, why in sorted(result.detected.items())]
+    writer.line("Auto-detected: " + "; ".join(parts), style="dim")
+    writer.line("Override with --standard mcp|llm|web|all.", style="dim")
 
 
 def _print_errors(result: ScanResult, writer: _Writer) -> None:

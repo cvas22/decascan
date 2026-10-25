@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from ..rules import all_rules
 from .config import ScanConfig
 from .context import ScanContext, build_context
+from .detect import detect_standards
 from .findings import Finding, Severity
 from .standards import STANDARDS
 
@@ -23,6 +24,8 @@ class ScanResult:
     duration_seconds: float
     errors: list[str]
     standards: tuple[str, ...] = ()
+    # Why each list was selected when `standards` was auto-detected; empty for an explicit choice.
+    detected: dict[str, list[str]] = field(default_factory=dict)
 
     def counts_by_severity(self) -> dict[str, int]:
         counts = {s.value: 0 for s in Severity}
@@ -44,12 +47,19 @@ def _is_suppressed(ctx: ScanContext, finding: Finding) -> bool:
     return any(marker in line for marker in SUPPRESSION_MARKERS)
 
 
-def active_standards(ctx: ScanContext) -> frozenset[str]:
-    # The MCP rules that describe a whole-server property already gate themselves on
-    # `ctx.is_mcp_server`, so running them on any codebase is safe.
+def active_standards(ctx: ScanContext) -> tuple[frozenset[str], dict[str, list[str]]]:
+    """The lists to run, and the evidence behind an auto-detected choice.
+
+    An explicit choice is used as given. Otherwise the lists are detected from imports and
+    dependencies; a codebase that matches none (a lone script, say) gets every list, because a
+    scanner that silently checks nothing is worse than one that checks too much.
+    """
     if ctx.config.standards is not None:
-        return ctx.config.standards
-    return frozenset(STANDARDS)
+        return ctx.config.standards, {}
+    detected = detect_standards(ctx)
+    if not detected:
+        return frozenset(STANDARDS), {}
+    return frozenset(detected), detected
 
 
 def scan(root: Path, config: ScanConfig | None = None) -> ScanResult:
@@ -59,7 +69,7 @@ def scan(root: Path, config: ScanConfig | None = None) -> ScanResult:
     ctx = build_context(root, config)
     findings: list[Finding] = []
     errors: list[str] = []
-    active = active_standards(ctx)
+    active, detected = active_standards(ctx)
     rules = [r for r in all_rules() if r.standard in active and config.rule_enabled(r.id)]
 
     for rule in rules:
@@ -94,4 +104,5 @@ def scan(root: Path, config: ScanConfig | None = None) -> ScanResult:
         duration_seconds=time.perf_counter() - started,
         errors=errors,
         standards=tuple(sorted(active)),
+        detected=detected,
     )
