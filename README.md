@@ -128,6 +128,9 @@ and so do the real `mcp-server-fetch` and `mcp-server-time`.
 pip install mcp-sift
 ```
 
+Requires Python 3.10 or newer. It has three small dependencies (`click`, `rich`, `PyYAML`) and runs
+entirely offline.
+
 > **Pre-release note:** v0.1 is not on PyPI yet, so the command above will not resolve until
 > the first release is published. Until then, install from a clone:
 >
@@ -169,6 +172,10 @@ drops into CI unchanged:
     sarif_file: mcp-sift.sarif
 ```
 
+Uploading SARIF needs `security-events: write`, and on a private repository also `actions: read` and
+GitHub Code Security enabled; without them the upload step fails with "Resource not accessible by
+integration". Keep the file as a build artifact if you cannot enable it.
+
 Suppress a finding you've reviewed by putting a suppression marker on the same source line —
 any of `mcp-sift:ignore`, `mcp-sift: ignore`, or `nosec mcp-sift`.
 
@@ -182,7 +189,7 @@ CircleCI are in [docs/ci.md](https://github.com/cvas22/mcp-sift/blob/main/docs/c
 - uses: cvas22/mcp-sift@main # pin to a tag or commit SHA
   with:
     fail-on: high
-    upload-sarif: "true"
+    upload-sarif: "true" # needs security-events: write (and actions: read on a private repo)
 ```
 
 ## CLI reference
@@ -414,8 +421,14 @@ Linux, Windows, macOS and several Pythons, and the release workflow re-runs it b
 ```bash
 uv venv --python 3.12
 uv pip install -e ".[dev]"
-pytest
+pytest                                   # the unit tests
+pytest --cov=mcp_sift                    # with coverage (CI enforces the floor in pyproject.toml)
+ruff check .                             # lint
+python scripts/generate_rule_docs.py --check   # docs/rules.md matches the rules
+uv build                                 # wheel and sdist into dist/
 ```
+
+The same checks run in CI; run them before opening a pull request.
 
 Rules live in `src/mcp_sift/rules/`: one module per MCP risk, plus `llm_top10.py` and `web_top10.py`
 for the other two lists. A rule is a function from a
@@ -441,6 +454,25 @@ mcp-sift standards --export src/mcp_sift/data/top10
 ```
 
 A test fails when the snapshot and the code disagree.
+
+## Documentation
+
+| | |
+|--|--|
+| [docs/rules.md](https://github.com/cvas22/mcp-sift/blob/main/docs/rules.md) | Every rule: severity, CWE, what fires and what stays quiet, and the fix |
+| [docs/standards.md](https://github.com/cvas22/mcp-sift/blob/main/docs/standards.md) | The three Top 10 lists, auto-detection, how findings combine, the cached catalog |
+| [docs/ci.md](https://github.com/cvas22/mcp-sift/blob/main/docs/ci.md) | The GitHub Action, pre-commit, and recipes for other CI systems |
+| [CHANGELOG.md](https://github.com/cvas22/mcp-sift/blob/main/CHANGELOG.md) | What changed |
+
+## Contributing
+
+Maintained by Srinivas Chippagiri ([@cvas22](https://github.com/cvas22)).
+
+Work on a branch and open a pull request against `main`. CI must pass: lint, the unit tests with the
+coverage floor, the fixture scans, and the wheel check. Add tests with the change, and update the docs
+and `CHANGELOG.md` when behaviour changes. Rules, parsers, the pipeline and the release metadata have
+code owners (see [.github/CODEOWNERS](https://github.com/cvas22/mcp-sift/blob/main/.github/CODEOWNERS));
+GitHub asks them for a review automatically.
 
 ## Status
 
