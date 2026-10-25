@@ -209,13 +209,13 @@ def _cors_origins(data: dict) -> list[str]:
 
 def load_manifest(path: Path, root: Path) -> Manifest | None:
     try:
-        text = path.read_text(encoding="utf-8")
+        text = path.read_text(encoding="utf-8-sig")  # tolerate a byte-order mark
         data = (
             yaml.safe_load(text)
             if path.suffix in {".yaml", ".yml"}
             else json.loads(text)
         )
-    except (OSError, ValueError, yaml.YAMLError):
+    except (OSError, ValueError, RecursionError, yaml.YAMLError):
         return None
     if not isinstance(data, dict):
         return None

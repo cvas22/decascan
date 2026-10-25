@@ -112,6 +112,7 @@ def scan(root: Path, config: ScanConfig | None = None) -> ScanResult:
             },
         )
 
+    errors.extend(ctx.errors)
     for facts in ctx.source_facts.values():
         if facts.parse_error:
             errors.append(f"{facts.path}: {facts.parse_error}")
