@@ -21,7 +21,7 @@ All notable changes. The project is pre-release (v0.1); nothing has been publish
   The log now covers the request, the effective configuration, every file read, manifests,
   dependency files, which lists were chosen and why, per-rule timings and the slowest rules, what
   was filtered or merged, the report written, the exit decision, and warnings for slow files and
-  rules. Every event is listed in `docs/logging.md`.
+  rules.
 - `--repo-root` / `MCP_SIFT_REPO_ROOT`, and `--keep-duplicates`.
 
 ### Changed
