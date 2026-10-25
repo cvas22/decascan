@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import pytest
@@ -179,10 +180,10 @@ def test_ci_has_a_unit_test_gate_with_a_coverage_floor():
     steps = " ".join(str(s.get("run", "")) for s in ci["jobs"]["unit-tests"]["steps"])
     assert "pytest" in steps and "--cov=mcp_sift" in steps and "--junitxml" in steps
     assert set(ci["jobs"]["ci-pass"]["needs"]) == {"unit-tests", "test", "linux-distros", "action"}
-    import tomllib
-
-    config = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
-    assert config["tool"]["coverage"]["report"]["fail_under"] >= 80
+    # tomllib is 3.11+, and this project still supports 3.10, so read the one value by hand.
+    pyproject = (ROOT / "pyproject.toml").read_text(encoding="utf-8")
+    match = re.search(r"^fail_under\s*=\s*(\d+)", pyproject, re.M)
+    assert match and int(match.group(1)) >= 80
 
 
 def test_release_is_gated_on_the_ci_suite():
