@@ -265,7 +265,7 @@ def _poetry_dependency(line: str, rel: str, line_no: int) -> Dependency | None:
 def _parse_package_json(text: str, rel: str) -> tuple[list[Dependency], list[InstallScript]]:
     try:
         data = json.loads(text)
-    except (json.JSONDecodeError, ValueError):
+    except (json.JSONDecodeError, ValueError, RecursionError):
         return [], []
     if not isinstance(data, dict):
         return [], []
@@ -327,7 +327,7 @@ def is_lockfile(name: str) -> bool:
 
 def load_dependencies(path: Path, rel: str) -> tuple[list[Dependency], list[InstallScript]]:
     try:
-        text = path.read_text(encoding="utf-8", errors="replace")
+        text = path.read_text(encoding="utf-8-sig", errors="replace")
     except OSError:
         return [], []
 

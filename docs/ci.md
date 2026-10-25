@@ -7,7 +7,7 @@ fits any pipeline as a plain command.
 |-----------|---------|
 | `0` | Clean, or nothing at or above `--fail-on` (or `--no-fail` was given) |
 | `1` | A finding at or above `--fail-on` (default `high`) |
-| `2` | Bad invocation: unknown rule, bad option, missing path |
+| `2` | Bad invocation (unknown rule, bad option, missing path) or the scan aborted. A crash never exits `1`, so it cannot be mistaken for findings |
 
 | `-o` | For |
 |------|-----|

@@ -164,22 +164,34 @@ def scan_command(
     if unknown:
         raise click.BadParameter(f"unknown rule id(s): {', '.join(sorted(unknown))}")
 
-    result = scan(path, config)
-
-    if output == "pretty":
-        console = Console(file=output_file.open("w", encoding="utf-8") if output_file else None)
-        pretty.render(result, console)
-    else:
-        renderer = {"json": json_out, "sarif": sarif, "github": github}[output]
-        text = renderer.render(result, __version__)
-        if output_file:
-            output_file.write_text(text, encoding="utf-8")
-        else:
-            click.echo(text)
+    try:
+        result = scan(path, config)
+        _emit(result, output, output_file)
+    except (OSError, MemoryError, RecursionError, ValueError, RuntimeError) as exc:
+        # Exit 1 means "findings"; a crash must not be mistaken for it by a pipeline.
+        logging_setup.get_logger("cli").exception("scan aborted")
+        click.echo(f"error: scan aborted: {type(exc).__name__}: {exc}", err=True)
+        sys.exit(EXIT_ERROR)
 
     if no_fail:
         sys.exit(EXIT_OK)
     sys.exit(EXIT_FINDINGS if result.should_fail(config.fail_on) else EXIT_OK)
+
+
+def _emit(result, output: str, output_file: Path | None) -> None:
+    if output == "pretty":
+        if output_file:
+            with output_file.open("w", encoding="utf-8") as handle:
+                pretty.render(result, Console(file=handle))
+        else:
+            pretty.render(result, Console())
+        return
+    renderer = {"json": json_out, "sarif": sarif, "github": github}[output]
+    text = renderer.render(result, __version__)
+    if output_file:
+        output_file.write_text(text, encoding="utf-8")
+    else:
+        click.echo(text)
 
 
 @main.command("rules")
