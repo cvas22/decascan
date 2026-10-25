@@ -124,3 +124,43 @@ def test_github_output_survives_a_legacy_console(monkeypatch):
     cli._emit(result, "github", None)
     console.flush()
     assert raw.getvalue()
+
+
+def _scan_json(*args: str) -> dict:
+    result = CliRunner().invoke(main, ["scan", VULNERABLE, "-o", "json", "--no-fail", *args])
+    assert result.exit_code == 0, result.output
+    return json.loads(result.output)
+
+
+def test_version_flag():
+    result = CliRunner().invoke(main, ["--version"])
+    assert result.exit_code == 0
+    assert "decascan" in result.output
+
+
+def test_min_severity_drops_lower_findings():
+    payload = _scan_json("--min-severity", "high")
+    assert payload["summary"]["findings"] > 0
+    assert {f["severity"] for f in payload["findings"]} <= {"critical", "high"}
+
+
+def test_disable_skips_a_rule():
+    assert any(f["rule_id"] == "MCP01-001" for f in _scan_json()["findings"])
+    assert not any(f["rule_id"] == "MCP01-001" for f in _scan_json("--disable", "MCP01-001")["findings"])
+
+
+def test_rule_runs_only_that_rule():
+    findings = _scan_json("--rule", "MCP01-001")["findings"]
+    assert findings and {f["rule_id"] for f in findings} == {"MCP01-001"}
+
+
+def test_exclude_skips_a_directory_by_name(tmp_path):
+    (tmp_path / "vendor").mkdir()
+    (tmp_path / "vendor" / "server.py").write_text(
+        'API_KEY = "sk-ant-api03-Vq7hK2mZ8xR4tN6wY1bC3dF5gH9jL0pQ2sT4uV6wX8yZ0aB2"\n', encoding="utf-8"
+    )
+    run = lambda *a: json.loads(  # noqa: E731
+        CliRunner().invoke(main, ["scan", str(tmp_path), "-o", "json", "--no-fail", *a]).output
+    )
+    assert run()["summary"]["findings"] > 0
+    assert run("--exclude", "vendor")["summary"]["findings"] == 0
