@@ -145,6 +145,20 @@ chosen and why, how long each rule took, and which files were skipped, then uplo
 build artifact. The report (`-o json`, `-o sarif`) is separate and unaffected. The same settings are
 available as `MCP_SIFT_VERBOSE`, `MCP_SIFT_LOG_FORMAT` and `MCP_SIFT_LOG_FILE` environment variables.
 
+## When something goes wrong
+
+- **Exit `2`:** the scan itself failed (bad option, unwritable `--output-file`, an internal error).
+  The message is on stderr. A crash never exits `1`, so a failing pipeline step with exit `1` always
+  means findings.
+- **Warnings in the report** (`errors` in JSON, notices in annotations): a parser failed on one file,
+  for example a file that is not valid Python, or pathologically nested JSON. That file is skipped and
+  the scan continues. `-v` shows which, and `-vv` also lists every skipped file and why.
+- **Nothing found where you expected something:** check `Auto-detected:` in the output. A framework
+  the detector does not know is not scanned for its list; force the list with `-s web`, `-s llm` or
+  `-s all`.
+- **Annotations on the wrong file:** the scan directory is not inside the repository root the scanner
+  found. Pass `--repo-root "$GITHUB_WORKSPACE"` (or set `MCP_SIFT_REPO_ROOT`).
+
 ## Choosing a gate
 
 - Start with `--fail-on high` and `--no-fail` on a first run to see the baseline, then tighten.
