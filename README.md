@@ -224,6 +224,9 @@ mcp-sift -vv --log-format json --log-file scan.jsonl scan . -o json -f report.js
 
 As a library, the `mcp_sift` logger is silent until you configure it.
 
+The scanner reads files under `PATH` but does not follow symlinks, and it does not read `.gitignore`;
+use `--exclude` for directories you want skipped.
+
 Default excludes (always skipped): `.git`, `node_modules`, `__pycache__`, `.venv`, `venv`,
 `dist`, `build`, `site-packages`, and similar build/cache directories.
 
@@ -290,6 +293,10 @@ every one tells you how to fix it. Full detail per rule in
 | | `MCP10-003` | A file operation is rooted at `/`, a home directory, or a drive root. |
 
 ### LLM Applications and web rules
+
+Severity, CWE, confidence, an example that fires, an example that stays quiet and the fix for each
+rule are in [docs/rules.md](https://github.com/cvas22/mcp-sift/blob/main/docs/rules.md), generated from
+the rules and their test samples.
 
 | List | Rule | What fires |
 |------|------|-----------|
@@ -360,8 +367,10 @@ compiler API is the top item for the next version.
 arguments, and a one-hop pass marks names assigned directly from a request value (`request.args`,
 `req.body`, ...). There is no data-flow analysis, so a value that reaches a sink through a helper is
 missed, and a similarly named variable can trip a rule. Every such finding carries a confidence below
-1.0. Matches inside string literals, comments, imports and test directories (`tests/`, `test_*.py`,
-`*.spec.ts`, ...) are skipped.
+1.0. Comments and docstrings are blanked before the rules read the file (so a docstring that shows
+`os.system("ping " + host)` as a bad example is not a finding; line numbers are unchanged), and matches
+inside string literals, imports and test directories (`tests/`, `test_*.py`, `*.spec.ts`, ...) are
+skipped. Strings that are values -- an SQL f-string, a system prompt -- are read on purpose.
 
 **Hostile input is contained.** Symlinks inside the scanned tree are skipped (a link must not make the
 scanner read outside it, or loop), excluded directories such as `node_modules` are never entered, a
@@ -409,9 +418,12 @@ for the other two lists. A rule is a function from a
 every language into the shared vocabulary in `parsers/common.py`, so rules never care whether a
 server is Python or TypeScript. The pattern-based rules share the helpers in `rules/_scan.py`.
 
-**Adding a rule.** Register it with `@rule(id=..., mcp_id=<risk id>, ...)`, add a case to
-`tests/test_standards.py` (and to the vulnerable fixture if it is a common shape), and add a
-`### <RULE-ID>` section to `docs/rules.md` -- a test fails if any rule is undocumented.
+**Adding a rule.** Register it with `@rule(id=..., mcp_id=<risk id>, ...)` and add positive and
+negative samples to `tests/test_web_llm_rules.py` (LLM and web rules) or a case to
+`tests/test_rules.py` (MCP rules). The LLM and web sections of `docs/rules.md` are generated from the
+rules and those samples: run `python scripts/generate_rule_docs.py` to refresh them (a test fails if
+they are stale). MCP rule sections are written by hand under `### <RULE-ID>`; a test fails if any
+rule is undocumented.
 
 **Adding a Top 10 list.** Define a `Standard` in `core/standards.py` (id, version, risk ids and
 names, and the risks that are `not_static`), add it to `STANDARDS`, and write its rule module. Risk
