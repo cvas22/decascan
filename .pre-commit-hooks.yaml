@@ -1,6 +1,6 @@
 - id: decascan
   name: decascan (OWASP Top 10 scan)
-  description: Offline scan of Python and TypeScript for MCP, LLM-application and web Top 10 risks.
+  description: Scan of Python and TypeScript for MCP, LLM-application and web Top 10 risks.
   entry: decascan scan
   language: python
   types_or: [python, ts, tsx, javascript, jsx, json, yaml, toml]

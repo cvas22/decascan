@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="docs/assets/banner.svg" alt="decascan: an offline OWASP Top 10 scanner for MCP, LLM and web code" width="820">
+<img src="docs/assets/banner.svg" alt="decascan: an OWASP Top 10 scanner for MCP, LLM and web code" width="820">
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](#install)
 [![License Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue?style=for-the-badge)](LICENSE)
@@ -8,7 +8,7 @@
 [![OWASP Top 10 lists](https://img.shields.io/badge/OWASP_Top_10-MCP_%C2%B7_LLM_%C2%B7_Web-0b1f3a?style=for-the-badge)](#what-it-checks)
 [![Status pre-release](https://img.shields.io/badge/status-pre--release-f59e0b?style=for-the-badge)](#status)
 
-**An offline security scanner for Python and TypeScript code, mapped to three OWASP Top 10 lists:
+**A security scanner for Python and TypeScript code, mapped to three OWASP Top 10 lists:
 the MCP Top 10, the Top 10 for LLM Applications, and the web Top 10.**
 
 [Install](#install) · [Use](#use) · [CI/CD](#cicd) · [Rules](docs/rules.md) · [Changelog](CHANGELOG.md)
