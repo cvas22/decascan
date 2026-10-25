@@ -1,7 +1,10 @@
 name: code-scanning
 
-# mcp-sift scanning its own source (not the deliberately vulnerable fixtures) and reporting to the
-# repository's code scanning tab.
+# mcp-sift scanning its own source (not the deliberately vulnerable fixtures).
+#
+# On a public repository the SARIF report goes to the code scanning tab. On a private one it is kept
+# as a build artifact instead: code scanning there needs GitHub Code Security (Advanced Security)
+# enabled, and without it the upload fails the job with "Resource not accessible by integration".
 on:
   push:
     branches: [main]
@@ -17,13 +20,23 @@ jobs:
     permissions:
       contents: read
       security-events: write # upload SARIF
+      actions: read # upload-sarif reads the workflow run; required on private repositories
     steps:
       - uses: actions/checkout@v4
 
-      - uses: ./
+      - id: scan
+        uses: ./
         with:
           path: src
           # The rule tables contain the very patterns they detect; scanning them is all noise.
           exclude: rules
-          upload-sarif: "true"
+          upload-sarif: ${{ github.event.repository.private == false }}
           fail-on: critical
+
+      - name: keep the SARIF report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: mcp-sift-sarif
+          path: ${{ steps.scan.outputs.sarif-file }}
+          if-no-files-found: ignore

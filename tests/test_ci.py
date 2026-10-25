@@ -166,7 +166,17 @@ def test_workflows_are_valid_and_the_ci_job_exercises_the_action():
     uses = [s.get("uses") for s in ci["jobs"]["action"]["steps"]]
     assert "./" in uses
     scanning = load(".github/workflows/code-scanning.yml")
-    assert scanning["jobs"]["mcp-sift"]["permissions"]["security-events"] == "write"
+    permissions = scanning["jobs"]["mcp-sift"]["permissions"]
+    assert permissions["security-events"] == "write"
+    assert permissions["actions"] == "read"  # upload-sarif fails on private repos without it
+
+
+def test_self_scan_uploads_to_code_scanning_only_on_public_repositories():
+    steps = load(".github/workflows/code-scanning.yml")["jobs"]["mcp-sift"]["steps"]
+    scan = next(s for s in steps if s.get("id") == "scan")
+    assert "private == false" in str(scan["with"]["upload-sarif"])
+    keep = next(s for s in steps if str(s.get("uses", "")).startswith("actions/upload-artifact"))
+    assert keep["if"] == "always()"  # the report is kept even when code scanning is unavailable
 
 
 def test_ci_documentation_covers_every_documented_system():
