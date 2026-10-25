@@ -320,10 +320,19 @@ def _find_flows(facts: SourceFacts, call_args: dict[int, str]) -> None:
                 break
 
 
+_QUOTED_LITERAL = re.compile(r"\"(?:[^\"\\\n]|\\.)*\"|'(?:[^'\\\n]|\\.)*'")
+
+
 def _mentions(args: str, param: str) -> bool:
+    """Whether `param` is used as a value in `args`, not merely named inside a string literal.
+
+    `exec("echo command")` mentions the word `command` but does not use the parameter of that name.
+    Quoted literals are blanked first; `${param}` inside a template literal is checked on the raw text.
+    """
     if _INTERPOLATION % param in args:
         return True
-    return bool(re.search(rf"(?<![\w.$]){re.escape(param)}(?![\w$])", args))
+    code = _QUOTED_LITERAL.sub('""', args)
+    return bool(re.search(rf"(?<![\w.$]){re.escape(param)}(?![\w$])", code))
 
 
 def _is_quoted(args: str, param: str) -> bool:
@@ -339,14 +348,19 @@ def _find_external_returns(text: str, facts: SourceFacts) -> None:
     if not external:
         return
 
+    lines = text.splitlines()
+
     for match in _RETURN_STMT.finditer(text):
         line = _line_of(text, match.start())
         body = match.group(1)
         for call in external:
             name = call.name.split(".")[0]
-            # Either the fetch is returned inline, or its awaited result is — both within a few
-            # lines of the call, which is as much flow as a lexical parser can honestly claim.
-            if name in body or (call.capability == ENV and "env" in body):
+            # Either the fetch is returned inline, or a variable holding its result is — both
+            # within a few lines of the call, which is as much flow as a lexical parser can claim.
+            carriers = {name} | _carrier_variables(lines, call.line, line)
+            if any(re.search(rf"(?<![\w.$]){re.escape(n)}(?![\w$])", body) for n in carriers) or (
+                call.capability == ENV and "env" in body
+            ):
                 if 0 <= line - call.line <= 8:
                     tool = next(
                         (t.name for t in facts.tools if t.spans(line)),
@@ -356,6 +370,30 @@ def _find_external_returns(text: str, facts: SourceFacts) -> None:
                         ExternalReturn(origin=call, line=line, tool=tool)
                     )
                     break
+
+
+_ASSIGNMENT = re.compile(r"\b(?:const|let|var)\s+(\w+)\s*=\s*(.*)")
+
+
+def _carrier_variables(lines: list[str], first: int, last: int) -> set[str]:
+    """Variables holding the result of the call on line `first`, as seen by line `last`.
+
+    `const res = await fetch(url); const body = await res.text(); return body` carries the fetch
+    through two assignments. Two hops cover the shapes that occur in practice.
+    """
+    carriers: set[str] = set()
+    window = range(max(first, 1), min(last, len(lines)) + 1)
+    for hop in range(2):
+        for number in window:
+            match = _ASSIGNMENT.search(lines[number - 1])
+            if not match:
+                continue
+            name, rhs = match.groups()
+            if hop == 0 and number == first or any(
+                re.search(rf"(?<![\w.$]){re.escape(c)}(?![\w$])", rhs) for c in carriers
+            ):
+                carriers.add(name)
+    return carriers
 
 
 def _server_name(text: str, start: int) -> str | None:

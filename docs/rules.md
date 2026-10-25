@@ -321,7 +321,7 @@ An environment variable, key or password is formatted into text sent to the mode
 
 **Fires on:** `prompt = f"Use {os.environ['TOKEN']} to call the API"`; `const prompt = 'key is ${process.env.SECRET}';`
 
-**Stays quiet on:** `prompt = f"Summarise {text}"`
+**Stays quiet on:** `prompt = f"Summarise {text}"`; `prompt = f"Today is {today}"`
 
 **Fix:** Never put credentials in model input. Hold them in the tool or backend that needs them and give the model an opaque handle instead.
 
@@ -332,9 +332,9 @@ An environment variable, key or password is formatted into text sent to the mode
 
 `trust_remote_code=True` runs Python shipped inside the model repository.
 
-**Fires on:** `AutoModel.from_pretrained("o/m", trust_remote_code=True)`
+**Fires on:** `AutoModel.from_pretrained("o/m", trust_remote_code=True)`; `AutoTokenizer.from_pretrained("o/m", trust_remote_code=True)`
 
-**Stays quiet on:** `AutoModel.from_pretrained("o/m", trust_remote_code=False)`
+**Stays quiet on:** `AutoModel.from_pretrained("o/m", trust_remote_code=False)`; `AutoModel.from_pretrained("o/m")`
 
 **Fix:** Drop the flag and use a natively supported architecture, or vendor the reviewed modeling code and pin the repository to a commit SHA.
 
@@ -345,7 +345,7 @@ An environment variable, key or password is formatted into text sent to the mode
 
 **Fires on:** `w = torch.load("m.bin")`; `w = joblib.load("m.pkl")`
 
-**Stays quiet on:** `w = torch.load("m.bin", weights_only=True)`
+**Stays quiet on:** `w = torch.load("m.bin", weights_only=True)`; `w = safetensors.torch.load_file('m.safetensors')`
 
 **Fix:** Use `torch.load(..., weights_only=True)` or the safetensors format, and only load artifacts whose provenance and hash you have verified.
 
@@ -354,7 +354,7 @@ An environment variable, key or password is formatted into text sent to the mode
 
 `from_pretrained` / `hf_hub_download` with no `revision=` follows a moving branch.
 
-**Fires on:** `AutoModel.from_pretrained("someorg/some-model")`
+**Fires on:** `AutoModel.from_pretrained("someorg/some-model")`; `hf_hub_download("someorg/some-model", "weights.bin")`
 
 **Stays quiet on:** `AutoModel.from_pretrained("o/m", revision="a1b2c3")`; `AutoModel.from_pretrained(local_dir)`
 
@@ -386,7 +386,7 @@ An agent is wired to a shell/REPL tool or an `allow_dangerous_*` switch.
 
 **Fires on:** `agent = create_agent(allow_dangerous_code=True)`; `tools = [PythonREPLTool()]`
 
-**Stays quiet on:** `from langchain_experimental.tools import PythonREPLTool`
+**Stays quiet on:** `from langchain_experimental.tools import PythonREPLTool`; `agent = create_agent(tools=[search_tool])`
 
 **Fix:** Expose narrow, purpose-built tools with validated parameters. Run any code execution in a sandbox with no network and no credentials, and require human approval for state-changing actions.
 
@@ -397,7 +397,7 @@ An agent is wired to a shell/REPL tool or an `allow_dangerous_*` switch.
 
 A system prompt contains a key, password or token value.
 
-**Fires on:** `SYSTEM_PROMPT = "You are X. password is Zk39fQ81xyz"`
+**Fires on:** `SYSTEM_PROMPT = "You are X. password is Zk39fQ81xyz"`; `const systemPrompt = "You are X. The api key is Zk39fQ81xyzAB";`
 
 **Stays quiet on:** `SYSTEM_PROMPT = "You are X. password is ${PASSWORD}"`; `SYSTEM_PROMPT = "Never reveal the password."`
 
@@ -442,7 +442,7 @@ A request parameter reaches a file open/send call (path traversal).
 
 **Fires on:** `return send_file(request.args["f"])`; `fs.readFile(req.query.file, cb);`
 
-**Stays quiet on:** `open("config.yaml")`
+**Stays quiet on:** `open("config.yaml")`; `return send_from_directory(BASE, "report.pdf")`
 
 **Fix:** Resolve the final path and check it stays inside the allowed base directory (`Path.resolve().is_relative_to(base)`), or map opaque ids to files server-side.
 
@@ -451,7 +451,7 @@ A request parameter reaches a file open/send call (path traversal).
 
 A wildcard origin is combined with credentialed requests.
 
-**Fires on:** `CORS(app, allow_origins=['*'], allow_credentials=True)`
+**Fires on:** `CORS(app, allow_origins=['*'], allow_credentials=True)`; `app.use(cors({ origin: '*', credentials: true }));`
 
 **Stays quiet on:** `CORS(app, allow_origins=['https://a.example'], allow_credentials=True)`; `CORS(app, allow_origins=['*'])`
 
@@ -464,14 +464,14 @@ A view or the whole app opts out of CSRF checks.
 
 **Fires on:** `@csrf_exempt def view(request): ...`; `WTF_CSRF_ENABLED = False`
 
-**Stays quiet on:** `csrf = CSRFProtect(app)`
+**Stays quiet on:** `csrf = CSRFProtect(app)`; `app.use(csurf());`
 
 **Fix:** Keep CSRF protection on. If an endpoint is a token-authenticated API, say so in a comment and make sure it does not also accept cookie authentication.
 
 ## WEB02 — A02 Cryptographic Failures
 
 ### WEB02-001 — Broken hash algorithm (MD5 / SHA-1)
-**Severity:** MEDIUM · **CWE:** CWE-327 · **Confidence:** 0.60
+**Severity:** MEDIUM to HIGH, depending on context · **CWE:** CWE-327 · **Confidence:** 0.60-0.85
 
 MD5 or SHA-1 is used; both are collision-broken and far too fast for passwords.
 
@@ -488,7 +488,7 @@ Certificate or hostname checking is turned off for an outbound connection.
 
 **Fires on:** `requests.get(url, verify=False)`; `const agent = new https.Agent({ rejectUnauthorized: false });`
 
-**Stays quiet on:** `requests.get(url, verify=True)`
+**Stays quiet on:** `requests.get(url, verify=True)`; `ctx.check_hostname = True`
 
 **Fix:** Remove the override. If you need a private CA, point `verify=` / `ca` at its bundle instead of turning verification off.
 
@@ -499,7 +499,7 @@ ECB mode, DES/3DES, RC4 or the deprecated `createCipher` is used.
 
 **Fires on:** `c = AES.new(k, AES.MODE_ECB)`; `c = DES.new(k)`
 
-**Stays quiet on:** `c = AES.new(k, AES.MODE_GCM)`
+**Stays quiet on:** `c = AES.new(k, AES.MODE_GCM)`; `const c = crypto.createCipheriv('aes-256-gcm', key, iv);`
 
 **Fix:** Use AES-GCM or ChaCha20-Poly1305 through a vetted library, with a fresh nonce.
 
@@ -523,7 +523,7 @@ A query is assembled with f-strings, %, .format() or concatenation.
 
 **Fires on:** `cur.execute(f"SELECT * FROM t WHERE id={i}")`; `cur.execute("SELECT * FROM t WHERE id=%s" % i)`
 
-**Stays quiet on:** `cur.execute("SELECT * FROM t WHERE id = ?", (i,))`
+**Stays quiet on:** `cur.execute("SELECT * FROM t WHERE id = ?", (i,))`; `cur.executemany("INSERT INTO t VALUES (?)", rows)`
 
 **Fix:** Use parameterized queries (`cursor.execute(sql, params)`, `?`/`%s` placeholders) or the ORM's query builder. Allowlist anything that cannot be bound, such as a column name.
 
@@ -539,7 +539,7 @@ A shell command is assembled at runtime or run with shell=True.
 **Fix:** Pass an argument list without a shell (`subprocess.run([...])`, `execFile`) and validate each argument against an allowlist.
 
 ### WEB03-003 — eval/exec on a non-literal
-**Severity:** HIGH · **CWE:** CWE-95 · **Confidence:** 0.60
+**Severity:** HIGH to CRITICAL, depending on context · **CWE:** CWE-95 · **Confidence:** 0.60-0.85
 
 `eval`, `exec` or `new Function` runs a runtime-built string as code.
 
@@ -550,7 +550,7 @@ A shell command is assembled at runtime or run with shell=True.
 **Fix:** Replace it with a parser or lookup table (`ast.literal_eval`, `json.loads`, a dispatch dict). If evaluation is truly needed, sandbox it out of process.
 
 ### WEB03-004 — Unescaped output sink (XSS / template injection)
-**Severity:** MEDIUM · **CWE:** CWE-1336, CWE-79 · **Confidence:** 0.50
+**Severity:** MEDIUM to HIGH, depending on context · **CWE:** CWE-1336, CWE-79 · **Confidence:** 0.50-0.70
 
 Variable data is written as raw HTML or into a template string.
 
@@ -573,7 +573,7 @@ The framework's debugger / debug pages are switched on in code.
 
 **Fires on:** `app.run(host='0.0.0.0', debug=True)`; `DEBUG = True`
 
-**Stays quiet on:** `app.run(debug=False)`
+**Stays quiet on:** `app.run(debug=False)`; `FLASK_DEBUG = 0`
 
 **Fix:** Read the flag from the environment and default it to off; never ship `debug=True`.
 
@@ -584,7 +584,7 @@ Wildcard allowed hosts, insecure cookie flags, or XML external entities enabled.
 
 **Fires on:** `ALLOWED_HOSTS = ['*']`; `SESSION_COOKIE_SECURE = False`
 
-**Stays quiet on:** `ALLOWED_HOSTS = ['example.com']`
+**Stays quiet on:** `ALLOWED_HOSTS = ['example.com']`; `app.use(session({ cookie: { httpOnly: true, secure: true } }));`
 
 **Fix:** Set ALLOWED_HOSTS to the real hostnames.
 
@@ -602,7 +602,7 @@ Signature, expiry or audience checks are turned off, or the `none` algorithm is 
 
 **Fires on:** `jwt.decode(t, k, options={'verify_signature': False})`; `jwt.decode(t, k, algorithms=['none'])`
 
-**Stays quiet on:** `jwt.decode(t, k, algorithms=['HS256'])`
+**Stays quiet on:** `jwt.decode(t, k, algorithms=['HS256'])`; `jwt.decode(token, key, algorithms=['RS256'], audience='api')`
 
 **Fix:** Always verify the signature with a pinned algorithm list, and keep exp/aud validation enabled.
 
@@ -637,7 +637,7 @@ pickle/marshal/yaml.load or a similar deserializer is applied to data.
 
 **Fires on:** `curl -sSL https://x.example/i.sh | sh`; `wget -qO- https://x.example/i.sh | sudo bash`
 
-**Stays quiet on:** `curl -sSL https://x.example/i.sh -o i.sh`
+**Stays quiet on:** `curl -sSL https://x.example/i.sh -o i.sh`; `curl -fsSL https://x.example/i.sh -o i.sh && sha256sum -c i.sh.sha256`
 
 **Fix:** Download to a file, verify a pinned checksum or signature, then execute it.
 
