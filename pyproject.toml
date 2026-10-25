@@ -76,3 +76,5 @@ select = ["E", "F", "I", "UP", "B"]
 # These modules are tables of regular expressions, which cannot be wrapped without changing them.
 "src/mcp_sift/rules/llm_top10.py" = ["E501"]
 "src/mcp_sift/rules/web_top10.py" = ["E501"]
+# Test samples are source code held in strings; wrapping them would change what is tested.
+"tests/*.py" = ["E501"]

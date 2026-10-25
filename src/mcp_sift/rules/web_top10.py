@@ -14,6 +14,7 @@ from ..core.context import ScanContext
 from ..core.entropy import looks_like_placeholder, redact, shannon_entropy
 from ..core.findings import Finding, Severity
 from ._scan import (
+    call_args,
     calls,
     is_comment,
     is_dynamic_string,
@@ -354,7 +355,7 @@ def command_injection(ctx: ScanContext) -> Iterable[Finding]:
         for call in calls(src, _SHELL_SINK):
             if ".exec(" in call.source_line and not src.is_js:
                 continue
-            uses_shell = bool(re.search(r"shell\s*=\s*True", call.args)) or "os.system" in call.source_line
+            uses_shell = bool(re.search(r"shell\s*=\s*True", call.args)) or "os.system" in call.source_line or "os.popen" in call.source_line
             dynamic = is_dynamic_string(call.args)
             from_request = is_tainted(call.args, names)
             if not (from_request or (dynamic and (uses_shell or src.is_js))):
@@ -383,6 +384,24 @@ def command_injection(ctx: ScanContext) -> Iterable[Finding]:
 _EVAL = re.compile(r"(?<![.\w])eval\(|(?<![.\w])exec\(|\bnew Function\(")
 
 
+def _function_body(args: str) -> str:
+    """The last top-level argument of `new Function(p1, p2, body)`."""
+    depth, last, quote = 0, 0, ""
+    for i, ch in enumerate(args):
+        if quote:
+            if ch == quote and args[i - 1] != "\\":
+                quote = ""
+        elif ch in "\"'`":
+            quote = ch
+        elif ch in "([{":
+            depth += 1
+        elif ch in ")]}":
+            depth -= 1
+        elif ch == "," and depth == 0:
+            last = i + 1
+    return args[last:]
+
+
 @rule(
     id="WEB03-003",
     mcp_id="WEB03",
@@ -393,7 +412,8 @@ def dynamic_code_execution(ctx: ScanContext) -> Iterable[Finding]:
     for src in source_files(ctx):
         names = tainted_names(src.text)
         for call in calls(src, _EVAL):
-            if is_literal(call.args) or not call.args.strip():
+            checked = _function_body(call.args) if "new Function" in call.source_line else call.args
+            if is_literal(checked) or not checked.strip():
                 continue
             if src.is_js and "exec(" in call.source_line and "eval(" not in call.source_line and "Function" not in call.source_line:
                 continue  # bare exec() in JS is child_process; WEB03-002 covers it
@@ -438,6 +458,8 @@ def xss(ctx: ScanContext) -> Iterable[Finding]:
                 line = line_text(src.text, line_no)
                 if is_comment(line):
                     continue
+                if match.group(0).startswith("document.write") and is_literal(call_args(src.text, match.end())):
+                    continue  # writing a fixed string is not an injection
                 from_request = is_tainted(line, names)
                 dynamic = (
                     pattern is _XSS_ASSIGN  # the regex already excluded plain-literal assignments
@@ -557,7 +579,7 @@ def insecure_settings(ctx: ScanContext) -> Iterable[Finding]:
 # --- A07 Identification and Authentication Failures --------------------------------------------
 
 _JWT_UNSAFE = re.compile(
-    r"[\"']verify_signature[\"']\s*:\s*False|algorithms\s*=\s*\[\s*[\"']none[\"']|\bignoreExpiration\s*:\s*true\b|"
+    r"[\"']verify_signature[\"']\s*:\s*False|algorithms\s*[:=]\s*\[\s*[\"']none[\"']|\bignoreExpiration\s*:\s*true\b|"
     r"\bverify_(?:exp|aud)[\"']\s*:\s*False|jwt\.decode\([^)\n]{0,300}verify\s*=\s*False",
     re.I,
 )

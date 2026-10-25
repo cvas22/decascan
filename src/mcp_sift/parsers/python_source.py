@@ -94,6 +94,24 @@ _NET_ROOTS = {
 _NET_METHODS = {"urlopen", "create_connection"}
 
 _SERVER_CTORS = {"FastMCP", "Server", "MCPServer", "McpServer", "LowLevelServer"}
+# Constructor names that only an MCP SDK defines. `Server` and `LowLevelServer` are ordinary words: a
+# class called `Server` is a server in a threat model, a web framework, a game -- not an MCP server.
+_MCP_ONLY_CTORS = {"FastMCP", "MCPServer", "McpServer"}
+_MCP_PACKAGES = {"mcp", "fastmcp", "modelcontextprotocol"}
+
+
+def _is_mcp_constructor(canonical: str, raw: str) -> bool:
+    """Whether a constructor call builds an MCP server, judged by where the name was imported from.
+
+    Resolved through an import (`from mcp.server import Server`) the origin must be an MCP package.
+    Not resolved (a bare name, defined here or star-imported), only names no one else uses count.
+    """
+    ctor = (canonical or raw).rsplit(".", 1)[-1]
+    if ctor not in _SERVER_CTORS:
+        return False
+    if "." in (canonical or ""):
+        return canonical.split(".")[0].lower() in _MCP_PACKAGES
+    return ctor in _MCP_ONLY_CTORS
 _TOOL_DECORATORS = {"tool", "add_tool"}
 _DISPATCH_DECORATORS = {"call_tool", "list_tools"}
 
@@ -348,9 +366,9 @@ class _Visitor(ast.NodeVisitor):
 
     # -- servers ---------------------------------------------------------------------------
     def _maybe_server(self, node: ast.Call, canonical: str, raw: str, line: int) -> None:
-        ctor = (canonical or raw).rsplit(".", 1)[-1]
-        if ctor not in _SERVER_CTORS:
+        if not _is_mcp_constructor(canonical, raw):
             return
+        ctor = (canonical or raw).rsplit(".", 1)[-1]
         name = _literal(node.args[0]) if node.args else _literal(_kwarg(node, "name"))
         port = _literal(_kwarg(node, "port"))
         self.facts.servers.append(
@@ -513,7 +531,31 @@ def _string_literals(node: ast.Call) -> list[str]:
             if isinstance(sub, ast.Constant) and isinstance(sub.value, str):
                 out.append(sub.value)
 
+    # `Path.home()` carries no string literal, but it is the home directory as surely as "~" is.
+    scanned = [node.func.value] if isinstance(node.func, ast.Attribute) else []
+    scanned += list(node.args) + [kw.value for kw in node.keywords]
+    if any(_is_home_call(sub) for root in scanned for sub in ast.walk(root)):
+        out.append("~")
+
     return list(dict.fromkeys(out))
+
+
+# Attributes of a response that describe the exchange rather than carry content, and builtins that
+# reduce a value to a number or a flag. `requests.get(url).status_code` hands the model an integer.
+_METADATA_ATTRS = {"status_code", "ok", "status", "reason", "elapsed"}
+_REDUCING_BUILTINS = {"len", "bool", "int", "float"}
+
+
+def _is_metadata_only(node: ast.AST) -> bool:
+    if isinstance(node, ast.Attribute):
+        return node.attr in _METADATA_ATTRS
+    if isinstance(node, ast.Call) and isinstance(node.func, ast.Name):
+        return node.func.id in _REDUCING_BUILTINS
+    return False
+
+
+def _is_home_call(node: ast.AST) -> bool:
+    return isinstance(node, ast.Call) and _dotted(node.func) in {"Path.home", "pathlib.Path.home"}
 
 
 def _docstring_line(node: ast.FunctionDef | ast.AsyncFunctionDef) -> int | None:
@@ -598,7 +640,7 @@ class _FlowAnalyzer:
         *network*, which an attacker can rewrite between two calls, and the environment, which the
         model has no business seeing at all.
         """
-        if node is None:
+        if node is None or _is_metadata_only(node):
             return None
         for sub in ast.walk(node):
             if isinstance(sub, ast.Name) and sub.id in self.origins:

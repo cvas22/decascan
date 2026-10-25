@@ -79,6 +79,8 @@ SENSITIVE_PATH_MARKERS = (
     ".pypirc",
     ".netrc",
     ".git-credentials",
+    ".bash_history",
+    ".zsh_history",
     "/etc/shadow",
     "/etc/passwd",
     "credentials.json",

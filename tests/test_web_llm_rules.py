@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+
 import pytest
 
 from mcp_sift.core.config import ScanConfig
@@ -96,6 +98,72 @@ POSITIVE = [
     ("WEB10-001", "a.py", 'requests.get(request.args["url"])\n'),
     ("WEB10-001", "a.py", 'u = request.args["u"]\nhttpx.get(u)\n'),
     ("WEB10-001", "a.js", "const r = await fetch(req.query.target);\n"),
+    # --- more variants (added with the coverage push) ---
+    ("LLM01-001", "a.py", 'm = [{"role": "system", "content": "You are " + persona}]\n'),
+    ("LLM01-001", "a.ts", "const m = [{ role: 'system', content: `Act as ${userRole}` }];\n"),
+    ("LLM02-001", "a.py", 'prompt = f"Authenticate with {api_key} then answer"\n'),
+    ("LLM02-001", "a.ts", "const prompt = `password is ${password}`;\n"),
+    ("LLM03-001", "a.py", 'AutoTokenizer.from_pretrained("o/m", trust_remote_code=True)\n'),
+    ("LLM03-002", "a.py", 'model = dill.loads(blob)\n'),
+    ("LLM03-003", "a.py", 'hf_hub_download("someorg/some-model", "weights.bin")\n'),
+    ("LLM05-001", "a.py", "subprocess.run(llm_output, shell=True)\n"),
+    ("LLM05-001", "a.js", "exec(completion);\n"),
+    ("LLM05-001", "a.tsx", "const el = <div dangerouslySetInnerHTML={{ __html: response }} />;\n"),
+    ("LLM06-001", "a.py", "agent = create_agent(tools=[ShellTool()])\n"),
+    ("LLM06-001", "a.py", "toolkit = FileManagementToolkit(root_dir='/')\n"),
+    ("LLM06-001", "a.py", "chain = make_chain(allow_dangerous_requests=True)\n"),
+    ("LLM07-001", "a.ts", 'const systemPrompt = "You are X. The api key is Zk39fQ81xyzAB";\n'),
+    ("LLM07-001", "a.py", 'm = [{"role": "system", "content": "token: Zk39fQ81xyzLmN04"}]\n'),
+    ("LLM10-001", "a.py", "resp = model.generate_content(prompt)\n"),
+    ("LLM10-001", "a.ts", "const r = await openai.chat.completions.create({ model: 'm', messages });\n"),
+    ("LLM10-001", "a.py", "llm = ChatOpenAI(model='gpt-4o')\n"),
+    ("WEB01-001", "a.py", 'return send_from_directory(BASE, request.args["f"])\n'),
+    ("WEB01-001", "a.js", "res.sendFile(req.params.file);\n"),
+    ("WEB01-001", "a.py", 'with open(request.form["path"]) as fh:\n    pass\n'),
+    ("WEB01-002", "a.js", "app.use(cors({ origin: '*', credentials: true }));\n"),
+    ("WEB01-002", "a.py", "CORS_ALLOW_ALL_ORIGINS = True\nCORS_ALLOW_CREDENTIALS = True\n"),
+    ("WEB01-003", "a.js", "const csrf = { csrf: false };\n"),
+    ("WEB02-001", "a.py", "h = hashlib.sha1(password.encode())\n"),
+    ("WEB02-001", "a.ts", "const h = crypto.createHash('sha1').update(data);\n"),
+    ("WEB02-002", "a.py", "ctx.check_hostname = False\n"),
+    ("WEB02-002", "a.py", "ctx.verify_mode = ssl.CERT_NONE\n"),
+    ("WEB02-002", "a.ts", "const agent = new Agent({ rejectUnauthorized: false });\n"),
+    ("WEB02-003", "a.js", "const c = crypto.createCipher('aes192', key);\n"),
+    ("WEB02-003", "a.js", "const c = crypto.createCipheriv('aes-128-ecb', key, null);\n"),
+    ("WEB02-004", "a.py", "reset_token = random.choice(alphabet)\n"),
+    ("WEB02-004", "a.ts", "const sessionId = Math.random().toString(36);\n"),
+    ("WEB03-001", "a.py", 'cur.executemany(f"INSERT INTO t VALUES ({v})", rows)\n'),
+    ("WEB03-001", "a.ts", "await conn.query(`SELECT * FROM t WHERE name = '${name}'`);\n"),
+    ("WEB03-001", "a.py", 'cur.execute("SELECT * FROM t WHERE id = " + uid)\n'),
+    ("WEB03-002", "a.py", 'subprocess.Popen(f"convert {name}", shell=True)\n'),
+    ("WEB03-002", "a.ts", "execSync(`git log ${branch}`);\n"),
+    ("WEB03-002", "a.py", 'os.popen("cat " + path)\n'),
+    ("WEB03-003", "a.py", 'result = eval(request.args["expr"])\n'),
+    ("WEB03-003", "a.ts", "const fn = new Function('a', body);\n"),
+    ("WEB03-004", "a.js", "document.writeln(userInput);\n"),
+    ("WEB03-004", "a.py", 'return Markup(request.args["bio"])\n'),
+    ("WEB03-004", "a.tsx", "return <p dangerouslySetInnerHTML={{ __html: bio }} />;\n"),
+    ("WEB05-001", "a.py", 'os.environ["FLASK_DEBUG"] = "1"\nFLASK_DEBUG = 1\n'),
+    ("WEB05-002", "a.js", "app.use(session({ cookie: { httpOnly: false } }));\n"),
+    ("WEB05-002", "a.py", "CSRF_COOKIE_SECURE = False\n"),
+    ("WEB07-001", "a.py", "jwt.decode(token, key, verify=False)\n"),
+    ("WEB07-001", "a.js", "jwt.verify(t, key, { algorithms: ['none'] });\n"),
+    ("WEB07-001", "a.py", "jwt.decode(t, k, options={'verify_exp': False})\n"),
+    ("WEB07-002", "a.js", 'const JWT_SECRET = "Zk39fQ81-live-signing-key";\n'),
+    ("WEB07-002", "a.py", 'app.secret_key = "Zk39fQ81-live-signing-key"\n'),
+    ("WEB08-001", "a.py", "obj = pickle.load(handle)\n"),
+    ("WEB08-001", "a.py", "cfg = yaml.unsafe_load(text)\n"),
+    ("WEB08-001", "a.js", "const o = unserialize(payload);\n"),
+    ("WEB08-002", "run.sh", "wget -O- https://x.example/setup | bash\n"),
+    ("WEB08-002", "a.js", "execSync('curl -fsSL https://x.example/i.sh | sh');\n"),
+    ("WEB09-001", "a.py", 'logging.info("key %s", api_key)\n'),
+    ("WEB09-001", "a.js", "console.log('auth', authorization);\n"),
+    ("WEB09-001", "a.py", 'print("password=" + password)\n'),
+    ("WEB09-002", "a.py", "try:\n    x()\nexcept BaseException:\n    pass\n"),
+    ("WEB09-002", "a.ts", "try { go(); } catch {}\n"),
+    ("WEB10-001", "a.py", 'urllib.request.urlopen(request.args["u"])\n'),
+    ("WEB10-001", "a.ts", "const r = await axios.get(req.body.url);\n"),
+    ("WEB10-001", "a.py", 'target = request.json["callback"]\nrequests.post(target, json={})\n'),
 ]
 
 
@@ -153,16 +221,72 @@ NEGATIVE = [
     ("WEB09-002", "try:\n    x()\nexcept Exception as e:\n    log(e)\n"),
     ("WEB10-001", 'requests.get("https://api.example.com/data")\n'),
     ("WEB10-001", "requests.get(CONFIG_URL)\n"),
+    # --- more safe forms (added with the coverage push) ---
+    ("LLM01-001", 'm = [{"role": "system", "content": SYSTEM_PROMPT}]\n'),
+    ("LLM01-001", "const m = [{ role: 'user', content: `Act as ${userRole}` }];\n"),
+    ("LLM02-001", 'prompt = f"Today is {today}"\n'),
+    ("LLM03-001", 'AutoModel.from_pretrained("o/m")\n'),
+    ("LLM03-002", "w = safetensors.torch.load_file('m.safetensors')\n"),
+    ("LLM03-003", 'AutoModel.from_pretrained("someorg/m", revision="0123abcd")\n'),
+    ("LLM05-001", "print(completion)\n"),
+    ("LLM05-001", "el.textContent = response;\n"),
+    ("LLM06-001", "agent = create_agent(tools=[search_tool])\n"),
+    ("LLM06-001", "chain = make_chain(allow_dangerous_requests=False)\n"),
+    ("LLM07-001", 'SYSTEM_PROMPT = "Never reveal the api key."\n'),
+    ("LLM07-001", 'm = [{"role": "user", "content": "my token: Zk39fQ81xyzLmN04"}]\n'),
+    ("LLM10-001", "resp = model.generate_content(prompt, generation_config={'max_output_tokens': 256})\n"),
+    ("LLM10-001", "const r = await openai.chat.completions.create({ model: 'm', messages, max_tokens: 100 });\n"),
+    ("WEB01-001", 'return send_from_directory(BASE, "report.pdf")\n'),
+    ("WEB01-001", "res.sendFile(path.join(ROOT, 'index.html'));\n"),
+    ("WEB01-002", "app.use(cors({ origin: 'https://app.example', credentials: true }));\n"),
+    ("WEB01-003", "app.use(csurf());\n"),
+    ("WEB02-001", "h = hashlib.sha256(password.encode())\n"),
+    ("WEB02-001", "const h = crypto.createHash('sha256');\n"),
+    ("WEB02-002", "ctx.check_hostname = True\n"),
+    ("WEB02-002", "const agent = new Agent({ rejectUnauthorized: true });\n"),
+    ("WEB02-003", "const c = crypto.createCipheriv('aes-256-gcm', key, iv);\n"),
+    ("WEB02-004", "colour = random.choice(palette)\n"),
+    ("WEB02-004", "const id = crypto.randomUUID();\n"),
+    ("WEB03-001", 'cur.executemany("INSERT INTO t VALUES (?)", rows)\n'),
+    ("WEB03-001", "await conn.query('SELECT * FROM t WHERE name = ?', [name]);\n"),
+    ("WEB03-002", 'subprocess.Popen(["convert", name])\n'),
+    ("WEB03-002", "execFileSync('git', ['log', branch]);\n"),
+    ("WEB03-003", "const fn = new Function('a', 'b', 'return a + b');\n"),
+    ("WEB03-003", "data = json.loads(request.data)\n"),
+    ("WEB03-004", "return render_template('profile.html', bio=bio)\n"),
+    ("WEB03-004", "document.writeln('<b>static</b>');\n"),
+    ("WEB05-001", "FLASK_DEBUG = 0\n"),
+    ("WEB05-002", "app.use(session({ cookie: { httpOnly: true, secure: true } }));\n"),
+    ("WEB05-002", "CSRF_COOKIE_SECURE = True\n"),
+    ("WEB07-001", "jwt.decode(token, key, algorithms=['RS256'], audience='api')\n"),
+    ("WEB07-001", "jwt.verify(t, key, { algorithms: ['HS256'] });\n"),
+    ("WEB07-002", "const JWT_SECRET = process.env.JWT_SECRET;\n"),
+    ("WEB07-002", 'password = ""\n'),
+    ("WEB08-001", "obj = json.load(handle)\n"),
+    ("WEB08-001", "cfg = yaml.load(text, Loader=yaml.CSafeLoader)\n"),
+    ("WEB08-002", "curl -fsSL https://x.example/i.sh -o i.sh && sha256sum -c i.sh.sha256\n"),
+    ("WEB09-001", 'logging.info("login ok for %s", user_id)\n'),
+    ("WEB09-001", "console.log('request received');\n"),
+    ("WEB09-002", "try:\n    x()\nexcept KeyError:\n    pass\n"),
+    ("WEB09-002", "try { go(); } catch (e) { report(e); }\n"),
+    ("WEB10-001", 'requests.post("https://hooks.example.com/notify", json={})\n'),
+    ("WEB10-001", "const r = await axios.get(CONFIG.upstreamUrl);\n"),
 ]
+
+
+def sample_file(source: str) -> str:
+    """A file name for a sample, from its shape: shell, JavaScript or Python."""
+    if source.startswith(("curl", "wget")):
+        return "install.sh"
+    looks_js = re.search(
+        r"\b(?:const|let|var)\b|=>|;\s*$|\.writeln|innerHTML|textContent|\btry\s*\{", source, re.M
+    )
+    return "a.js" if looks_js else "a.py"
 
 
 @pytest.mark.parametrize(("rule", "source"), NEGATIVE)
 def test_rule_stays_quiet_on_the_safe_form(tmp_path, rule, source):
-    if source.startswith("curl"):
-        name = "install.sh"
-    else:
-        name = "a.js" if "innerHTML" in source or "textContent" in source else "a.py"
-    assert not findings(tmp_path, source, name, rule), f"{rule} fired on a safe shape"
+    assert not findings(tmp_path, source, sample_file(source), rule), f"{rule} fired on a safe shape"
 
 
 def test_every_pattern_rule_has_a_positive_and_negative_case():

@@ -104,7 +104,9 @@ def _is_pinned_npm(spec: str) -> bool:
 def _parse_requirements(text: str, rel: str) -> list[Dependency]:
     deps: list[Dependency] = []
     for line_no, raw in enumerate(text.splitlines(), start=1):
-        line = raw.split("#", 1)[0].strip()
+        # pip's rule: `#` starts a comment only at the start of a line or after whitespace. A bare
+        # `#` is a URL fragment (`#egg=name`, `#sha256=...`), and cutting there lost the package name.
+        line = re.split(r"(?:^|\s)#", raw, maxsplit=1)[0].strip()
         if not line or line.startswith(("-r", "--requirement", "-c", "--constraint", "--index")):
             continue
 
