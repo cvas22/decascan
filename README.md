@@ -20,11 +20,15 @@ the MCP Top 10, the Top 10 for LLM Applications, and the web Top 10.**
 **DecaScan** takes its name from *deca*, ten: it scans for the OWASP Top 10 risks. The command is
 `decascan`.
 
-MCP servers run with the privileges of the developer who installed them: they read files, call
-internal APIs, and execute commands on behalf of an LLM that anything in its context window can
-influence. `decascan` reads a server's manifest, config, and source and tells you where that trust
-is misplaced — before you ship it. The same scan also checks the application code around it for
-the LLM-specific and classic web risks, and groups every finding by list and category.
+`decascan` scans source code against three OWASP Top 10 lists: the **MCP Top 10** for MCP servers, the
+**Top 10 for LLM Applications** for code that calls a model, and the classic **web Top 10** for web
+applications and APIs. It reads manifests, config and Python and TypeScript/JavaScript source, works out
+which lists apply to the project, and groups every finding by list and category.
+
+MCP servers are the sharpest case. They run with the privileges of the developer who installed them: they
+read files, call internal APIs, and execute commands on behalf of an LLM that anything in its context
+window can influence. `decascan` shows where that trust is misplaced, and checks the application code
+around the server for the LLM and web risks in the same pass.
 
 No API key. No network calls. No account. `decascan scan .` and you have your answer.
 
