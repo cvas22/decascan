@@ -68,10 +68,10 @@
     <g font-size="18" font-weight="600">
       <rect x="302" y="215" width="170" height="38" rx="19" fill="#38bdf8" fill-opacity="0.15" stroke="#38bdf8" stroke-opacity="0.5"/>
       <text x="387" y="240" text-anchor="middle" fill="#bae6fd">MCP Top 10</text>
-      <rect x="486" y="215" width="226" height="38" rx="19" fill="#5eead4" fill-opacity="0.15" stroke="#5eead4" stroke-opacity="0.5"/>
-      <text x="599" y="240" text-anchor="middle" fill="#99f6e4">LLM Apps Top 10 · 2025</text>
-      <rect x="726" y="215" width="190" height="38" rx="19" fill="#fbbf24" fill-opacity="0.15" stroke="#fbbf24" stroke-opacity="0.5"/>
-      <text x="821" y="240" text-anchor="middle" fill="#fde68a">Web Top 10 · 2021</text>
+      <rect x="486" y="215" width="196" height="38" rx="19" fill="#5eead4" fill-opacity="0.15" stroke="#5eead4" stroke-opacity="0.5"/>
+      <text x="584" y="240" text-anchor="middle" fill="#99f6e4">LLM Apps Top 10</text>
+      <rect x="696" y="215" width="150" height="38" rx="19" fill="#fbbf24" fill-opacity="0.15" stroke="#fbbf24" stroke-opacity="0.5"/>
+      <text x="771" y="240" text-anchor="middle" fill="#fde68a">Web Top 10</text>
     </g>
   </g>
 </svg>
