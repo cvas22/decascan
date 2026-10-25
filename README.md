@@ -32,6 +32,8 @@ around the server for the LLM and web risks in the same pass.
 
 No API key. No network calls. No account. `decascan scan .` and you have your answer.
 
+⭐ If DecaScan helps you check your code against the OWASP Top 10, star the repo. Stars are how other teams find it.
+
 ## Example run
 
 A real scan of `tests/fixtures/vulnerable_ts` — a 30-line TypeScript MCP server. Fifteen findings in
