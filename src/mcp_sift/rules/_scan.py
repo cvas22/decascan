@@ -65,7 +65,7 @@ def source_files(ctx: ScanContext) -> Iterator[SourceFile]:
         if ctx.is_minified(rel, MAX_LINE_CHARS):
             log.debug("file skipped by pattern rules: minified or generated", extra={"file": rel})
             continue
-        yield SourceFile(rel, ctx.text(rel), not rel.lower().endswith(".py"))
+        yield SourceFile(rel, ctx.masked_text(rel), not rel.lower().endswith(".py"))
 
 
 def is_comment(line: str) -> bool:
@@ -132,7 +132,7 @@ def calls(src: SourceFile, pattern: re.Pattern[str]) -> Iterator[Call]:
         yield Call(line_no, call_args(src.text, match.end()), source_line)
 
 
-_ASSIGN_RE = re.compile(r"^\s*(?:const |let |var )?([A-Za-z_]\w*)\s*(?::[^=\n]+)?=(?!=)\s*(.+)$", re.M)
+_ASSIGN_RE = re.compile(r"^[ \t]*(?:const |let |var )?([A-Za-z_]\w*)\s*(?::[^=\n]+)?=(?!=)\s*(.+)$", re.M)
 
 
 def tainted_names(text: str) -> set[str]:

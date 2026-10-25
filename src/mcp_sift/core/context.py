@@ -20,6 +20,7 @@ from ..parsers.python_source import parse_python
 from .config import SOURCE_SUFFIXES, TEXT_SUFFIXES, ScanConfig
 from .lines import line_text
 from .log import get_logger
+from .mask import mask_source
 
 log = get_logger("context")
 
@@ -39,6 +40,7 @@ class ScanContext:
     errors: list[str] = field(default_factory=list)
     _text_cache: dict[str, str] = field(default_factory=dict, repr=False)
     _minified_cache: dict[str, bool] = field(default_factory=dict, repr=False)
+    _masked_cache: dict[str, str] = field(default_factory=dict, repr=False)
 
     @property
     def has_lockfile(self) -> bool:
@@ -66,6 +68,16 @@ class ScanContext:
             except OSError:
                 self._text_cache[rel_path] = ""
         return self._text_cache[rel_path]
+
+    def masked_text(self, rel_path: str) -> str:
+        """The file with comments and docstrings blanked (same length and line structure).
+
+        What the pattern-based rules read: an example in a docstring or a mention in a comment is
+        not code. Cached, since every rule asks for every file.
+        """
+        if rel_path not in self._masked_cache:
+            self._masked_cache[rel_path] = mask_source(rel_path, self.text(rel_path))
+        return self._masked_cache[rel_path]
 
     def is_minified(self, rel_path: str, max_line_chars: int) -> bool:
         """Whether any line is longer than `max_line_chars` (cached: every rule asks per file)."""
