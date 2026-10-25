@@ -1,0 +1,111 @@
+name: mcp-sift
+description: >-
+  Offline OWASP Top 10 scan (MCP, LLM applications, web) of Python and TypeScript code. Fails the
+  job on findings and can upload SARIF to GitHub code scanning.
+author: cvas22
+branding:
+  icon: shield
+  color: blue
+
+inputs:
+  path:
+    description: Directory or file to scan.
+    default: "."
+  standard:
+    description: >-
+      Top 10 list(s) to scan against, space separated: auto, all, mcp, llm, web. `auto` detects
+      them from the code's imports and dependencies.
+    default: auto
+  fail-on:
+    description: Fail the job at this severity or above (critical, high, medium, low, info).
+    default: high
+  min-severity:
+    description: Drop findings below this severity from the report.
+    default: info
+  exclude:
+    description: Extra directory names to skip, space separated.
+    default: ""
+  sarif-file:
+    description: Where to write the SARIF report.
+    default: mcp-sift.sarif
+  upload-sarif:
+    description: >-
+      Upload the SARIF report to GitHub code scanning. Needs `security-events: write`, and is not
+      available to pull requests from forks.
+    default: "false"
+  annotations:
+    description: Also print findings as workflow annotations on the PR and run page.
+    default: "true"
+  python-version:
+    description: Python used to run the scanner (3.10 or newer).
+    default: "3.12"
+  version:
+    description: >-
+      mcp-sift version to install from PyPI (for example `0.1.0`). Empty installs the copy bundled
+      with this action, which is the right choice when pinning the action to a tag or commit.
+    default: ""
+
+outputs:
+  sarif-file:
+    description: Path of the SARIF report.
+    value: ${{ steps.scan.outputs.sarif-file }}
+  exit-code:
+    description: "0 clean, 1 findings at or above fail-on, 2 bad invocation."
+    value: ${{ steps.scan.outputs.exit-code }}
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    - name: install mcp-sift
+      shell: bash
+      env:
+        VERSION: ${{ inputs.version }}
+      run: |
+        if [ -n "$VERSION" ]; then
+          python -m pip install --quiet "mcp-sift==$VERSION"
+        else
+          python -m pip install --quiet "$GITHUB_ACTION_PATH"
+        fi
+
+    - name: scan
+      id: scan
+      shell: bash
+      env:
+        SCAN_PATH: ${{ inputs.path }}
+        STANDARDS: ${{ inputs.standard }}
+        FAIL_ON: ${{ inputs.fail-on }}
+        MIN_SEVERITY: ${{ inputs.min-severity }}
+        EXCLUDES: ${{ inputs.exclude }}
+        SARIF_FILE: ${{ inputs.sarif-file }}
+        ANNOTATIONS: ${{ inputs.annotations }}
+      run: |
+        # Inputs reach the shell through env vars, never by expression interpolation into the
+        # script text, so a crafted input cannot inject commands.
+        args=(--fail-on "$FAIL_ON" --min-severity "$MIN_SEVERITY")
+        for s in $STANDARDS; do args+=(--standard "$s"); done
+        for e in $EXCLUDES; do args+=(--exclude "$e"); done
+
+        # The SARIF run decides the exit code. Annotations come from a second pass with --no-fail;
+        # scans take seconds and run offline, so rendering twice beats a second output flag.
+        set +e
+        mcp-sift scan "$SCAN_PATH" "${args[@]}" -o sarif -f "$SARIF_FILE"
+        code=$?
+        set -e
+        if [ "$ANNOTATIONS" = "true" ]; then
+          mcp-sift scan "$SCAN_PATH" "${args[@]}" -o github --no-fail
+        fi
+
+        echo "sarif-file=$SARIF_FILE" >> "$GITHUB_OUTPUT"
+        echo "exit-code=$code" >> "$GITHUB_OUTPUT"
+        exit "$code"
+
+    - name: upload SARIF
+      if: ${{ always() && inputs.upload-sarif == 'true' && hashFiles(inputs.sarif-file) != '' }}
+      uses: github/codeql-action/upload-sarif@v3
+      with:
+        sarif_file: ${{ inputs.sarif-file }}
+        category: mcp-sift

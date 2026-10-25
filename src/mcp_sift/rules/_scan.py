@@ -148,7 +148,7 @@ def is_tainted(args: str, names: set[str]) -> bool:
 
 
 _DYNAMIC_STRING = (
-    re.compile(r"^\s*f[\"']"),  # Python f-string
+    re.compile(r"(?<![\w])f[\"']"),  # Python f-string
     re.compile(r"[\"']\s*%\s*[\(\w]"),  # "..." % x
     re.compile(r"\.format\("),
     re.compile(r"[\"']\s*\+\s*[A-Za-z_]"),  # "..." + x

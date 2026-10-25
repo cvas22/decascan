@@ -26,6 +26,12 @@ from ._scan import (
 from .base import rule
 
 _USER_HINT = re.compile(r"user|input|query|request|message|question|text|prompt|body|param", re.I)
+_INTERPOLATION = re.compile(r"\$?\{([^{}\n]*)\}|\.format\(([^)\n]*)\)|\+\s*([\w.\[\]]+)")
+
+
+def _interpolated(segment: str) -> str:
+    """The expressions spliced into a string on this line, so keywords elsewhere do not count."""
+    return " ".join(part for groups in _INTERPOLATION.findall(segment) for part in groups if part)
 
 # --- LLM01 -------------------------------------------------------------------------------------
 
@@ -53,7 +59,7 @@ def dynamic_system_prompt(ctx: ScanContext) -> Iterable[Finding]:
                 line = line_text(src.text, line_no)
                 if is_comment(line):
                     continue
-                looks_like_user = bool(_USER_HINT.search(match.group(0)))
+                looks_like_user = bool(_USER_HINT.search(_interpolated(line[line.find("content") :])))
                 yield make_finding(
                     rule_id="LLM01-001",
                     risk_id="LLM01",

@@ -15,7 +15,7 @@ from .core.config import ScanConfig
 from .core.findings import Severity
 from .core.scanner import scan
 from .core.standards import RISK_NAMES, STANDARDS
-from .outputs import json_out, pretty, sarif
+from .outputs import github, json_out, pretty, sarif
 from .rules import all_rules
 
 SEVERITIES = [s.value for s in Severity]
@@ -47,9 +47,9 @@ def _resolve_standards(chosen: tuple[str, ...]) -> frozenset[str] | None:
 @click.option(
     "--output",
     "-o",
-    type=click.Choice(["pretty", "json", "sarif"]),
+    type=click.Choice(["pretty", "json", "sarif", "github"]),
     default="pretty",
-    help="Output format. `sarif` uploads to GitHub Code Scanning.",
+    help="Output format. `sarif` uploads to GitHub Code Scanning; `github` prints PR annotations.",
 )
 @click.option(
     "--output-file",
@@ -122,7 +122,7 @@ def scan_command(
         console = Console(file=output_file.open("w", encoding="utf-8") if output_file else None)
         pretty.render(result, console)
     else:
-        renderer = json_out if output == "json" else sarif
+        renderer = {"json": json_out, "sarif": sarif, "github": github}[output]
         text = renderer.render(result, __version__)
         if output_file:
             output_file.write_text(text, encoding="utf-8")

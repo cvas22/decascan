@@ -47,10 +47,32 @@ jobs:
       - name: scan the clean fixture (expect none)
         run: mcp-sift scan tests/fixtures/clean_python
 
+      # The LLM and web Top 10 rule sets, with auto-detection choosing the lists.
+      - name: scan the vulnerable web/LLM fixture (expect findings)
+        shell: bash
+        run: |
+          mcp-sift scan tests/fixtures/vulnerable_webllm && exit 1
+          echo "exited non-zero as expected"
+
+      - name: scan the clean web/LLM fixture (expect none)
+        run: mcp-sift scan tests/fixtures/clean_webllm
+
       - name: build wheel
         run: |
           python -m pip install build
           python -m build --wheel
+
+      # The cached Top 10 catalog must ship inside the wheel.
+      - name: wheel contains the cached catalog
+        shell: bash
+        run: |
+          python - <<'PY'
+          import glob, zipfile
+          wheel = glob.glob("dist/*.whl")[0]
+          names = zipfile.ZipFile(wheel).namelist()
+          assert any(n.endswith("mcp_sift/data/top10.json") for n in names), names
+          print("ok:", wheel)
+          PY
 
   # Linux distro userlands people actually `pip install mcp-sift` onto. All run on an Ubuntu host
   # but inside the distro's container, so glibc-vs-musl and dnf/apt/apk differences are exercised.
@@ -107,7 +129,68 @@ jobs:
       - name: scan the clean fixture (expect none)
         run: mcp-sift scan tests/fixtures/clean_python
 
+      # The LLM and web Top 10 rule sets, with auto-detection choosing the lists.
+      - name: scan the vulnerable web/LLM fixture (expect findings)
+        shell: bash
+        run: |
+          mcp-sift scan tests/fixtures/vulnerable_webllm && exit 1
+          echo "exited non-zero as expected"
+
+      - name: scan the clean web/LLM fixture (expect none)
+        run: mcp-sift scan tests/fixtures/clean_webllm
+
       - name: build wheel
         run: |
           python -m pip install build
           python -m build --wheel
+
+      # The cached Top 10 catalog must ship inside the wheel.
+      - name: wheel contains the cached catalog
+        shell: bash
+        run: |
+          python - <<'PY'
+          import glob, zipfile
+          wheel = glob.glob("dist/*.whl")[0]
+          names = zipfile.ZipFile(wheel).namelist()
+          assert any(n.endswith("mcp_sift/data/top10.json") for n in names), names
+          print("ok:", wheel)
+          PY
+
+  # The composite action other repositories consume with `uses: cvas22/mcp-sift@...`, exercised
+  # from this checkout so a broken action.yml fails here instead of in someone else's pipeline.
+  action:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: clean fixture passes
+        id: clean
+        uses: ./
+        with:
+          path: tests/fixtures/clean_webllm
+          sarif-file: clean.sarif
+
+      - name: vulnerable fixture fails the job
+        id: vulnerable
+        uses: ./
+        continue-on-error: true
+        with:
+          path: tests/fixtures/vulnerable_webllm
+          standard: web llm
+          sarif-file: vulnerable.sarif
+
+      - name: check outcomes and SARIF
+        shell: bash
+        run: |
+          test "${{ steps.clean.outcome }}" = success
+          test "${{ steps.vulnerable.outcome }}" = failure
+          test "${{ steps.vulnerable.outputs.exit-code }}" = 1
+          python - <<'PY'
+          import json
+          sarif = json.load(open("vulnerable.sarif"))
+          assert sarif["version"] == "2.1.0" and sarif["runs"][0]["results"], "no SARIF results"
+          assert not json.load(open("clean.sarif"))["runs"][0]["results"]
+          print("sarif ok")
+          PY

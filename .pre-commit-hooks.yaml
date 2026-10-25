@@ -1,0 +1,10 @@
+- id: mcp-sift
+  name: mcp-sift (OWASP Top 10 scan)
+  description: Offline scan of Python and TypeScript for MCP, LLM-application and web Top 10 risks.
+  entry: mcp-sift scan
+  language: python
+  types_or: [python, ts, tsx, javascript, jsx, json, yaml, toml]
+  # One scan of the whole tree: the MCP rules compare a manifest with the code, so scanning only
+  # the staged files would miss exactly the cross-file findings.
+  pass_filenames: false
+  args: [".", "--fail-on", "high"]
