@@ -229,6 +229,8 @@ CircleCI are in [docs/ci.md](https://github.com/cvas22/decascan/blob/main/docs/c
 ## CLI reference
 
 Three commands: `scan`, `rules` and `standards`. `PATH` may be a directory **or a single file**.
+`decascan --version` prints the installed version, and `--help` works on the command and on each subcommand
+(`decascan scan --help`).
 
 ```console
 $ decascan scan PATH [options]
