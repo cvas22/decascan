@@ -472,7 +472,7 @@ def xss(ctx: ScanContext) -> Iterable[Finding]:
 
 # --- A05 Security Misconfiguration -------------------------------------------------------------
 
-_DEBUG_ON = re.compile(r"\.run\([^)\n]{0,300}debug\s*=\s*True|^\s*DEBUG\s*=\s*True\b|\bFLASK_DEBUG\s*=\s*[\"']?1", re.M)
+_DEBUG_ON = re.compile(r"\.run\([^)\n]{0,300}debug\s*=\s*True|^[ \t]*DEBUG\s*=\s*True\b|\bFLASK_DEBUG\s*=\s*[\"']?1", re.M)
 _DEV_FILE = re.compile(r"dev|local|example|sample|test|debug", re.I)
 
 

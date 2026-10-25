@@ -360,8 +360,10 @@ compiler API is the top item for the next version.
 arguments, and a one-hop pass marks names assigned directly from a request value (`request.args`,
 `req.body`, ...). There is no data-flow analysis, so a value that reaches a sink through a helper is
 missed, and a similarly named variable can trip a rule. Every such finding carries a confidence below
-1.0. Matches inside string literals, comments, imports and test directories (`tests/`, `test_*.py`,
-`*.spec.ts`, ...) are skipped.
+1.0. Comments and docstrings are blanked before the rules read the file (so a docstring that shows
+`os.system("ping " + host)` as a bad example is not a finding; line numbers are unchanged), and matches
+inside string literals, imports and test directories (`tests/`, `test_*.py`, `*.spec.ts`, ...) are
+skipped. Strings that are values -- an SQL f-string, a system prompt -- are read on purpose.
 
 **Hostile input is contained.** Symlinks inside the scanned tree are skipped (a link must not make the
 scanner read outside it, or loop), excluded directories such as `node_modules` are never entered, a
