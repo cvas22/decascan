@@ -368,6 +368,10 @@ public servers is a v0.2 deliverable.
 
 ## Development
 
+CI runs the unit tests on every push and pull request: the full suite with coverage (floor in
+`pyproject.toml`, reports uploaded as an artifact and summarised on the run page), repeated across
+Linux, Windows, macOS and several Pythons, and the release workflow re-runs it before publishing.
+
 ```bash
 uv venv --python 3.12
 uv pip install -e ".[dev]"

@@ -172,3 +172,21 @@ def test_ci_documentation_covers_every_documented_system():
     docs = (ROOT / "docs" / "ci.md").read_text(encoding="utf-8")
     for system in ("GitHub Actions", "pre-commit", "GitLab CI", "Jenkins", "Azure Pipelines", "CircleCI"):
         assert system in docs
+
+
+def test_ci_has_a_unit_test_gate_with_a_coverage_floor():
+    ci = load(".github/workflows/ci.yml")
+    steps = " ".join(str(s.get("run", "")) for s in ci["jobs"]["unit-tests"]["steps"])
+    assert "pytest" in steps and "--cov=mcp_sift" in steps and "--junitxml" in steps
+    assert set(ci["jobs"]["ci-pass"]["needs"]) == {"unit-tests", "test", "linux-distros", "action"}
+    import tomllib
+
+    config = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
+    assert config["tool"]["coverage"]["report"]["fail_under"] >= 80
+
+
+def test_release_is_gated_on_the_ci_suite():
+    release = load(".github/workflows/release.yml")
+    assert release["jobs"]["tests"]["uses"] == "./.github/workflows/ci.yml"
+    assert release["jobs"]["pypi"]["needs"] == "tests"
+    assert "workflow_call" in load(".github/workflows/ci.yml")[True]  # YAML parses `on:` as True
