@@ -20,6 +20,10 @@ the MCP Top 10, the Top 10 for LLM Applications, and the web Top 10.**
 **DecaScan** takes its name from *deca*, ten: it scans for the OWASP Top 10 risks. The command is
 `decascan`.
 
+Created and led by **Srinivas Chippagiri** ([@cvas22](https://github.com/cvas22)): DecaScan, a scanner for the OWASP MCP, LLM Applications and web Top 10 lists.
+
+⭐ If DecaScan helps you check your code against the OWASP Top 10, **star the repo.** Stars are how other teams find it.
+
 **DecaScan** scans source code against three OWASP Top 10 lists: the **MCP Top 10** for MCP servers, the
 **Top 10 for LLM Applications** for code that calls a model, and the classic **web Top 10** for web
 applications and APIs. It reads manifests, config and Python and TypeScript/JavaScript source, works out
@@ -31,10 +35,6 @@ window can influence. `decascan` shows where that trust is misplaced, and checks
 around the server for the LLM and web risks in the same pass.
 
 No API key. No network calls. No account. `decascan scan .` and you have your answer.
-
-Created and led by Srinivas Chippagiri ([@cvas22](https://github.com/cvas22)): DecaScan, a scanner for the OWASP MCP, LLM Applications and web Top 10 lists.
-
-⭐ If DecaScan helps you check your code against the OWASP Top 10, star the repo. Stars are how other teams find it.
 
 ## Example run
 
