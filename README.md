@@ -550,7 +550,7 @@ GitHub asks them for a review automatically.
 - **Questions and bugs:** [open an issue](https://github.com/cvas22/decascan/issues/new). Include the command you ran and `decascan --version`.
 - **Contributing:** see [CONTRIBUTING.md](https://github.com/cvas22/decascan/blob/main/CONTRIBUTING.md).
 - **Star the repo** if it's useful. Stars are how other teams find it.
-- **Using it in production?** [Add your team →](https://github.com/cvas22/decascan/issues/new?title=Adopter%3A+) as an issue, or see [ADOPTERS.md](https://github.com/cvas22/decascan/blob/main/ADOPTERS.md).
+- **Want to be featured as an adopter or user?** [Raise an issue!](https://github.com/cvas22/decascan/issues/new?title=Adopter%3A+) Or see [ADOPTERS.md](https://github.com/cvas22/decascan/blob/main/ADOPTERS.md).
 
 ## Status
 
