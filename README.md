@@ -38,7 +38,7 @@ No API key. No network calls. No account. `decascan scan .` and you have your an
 - **Questions and bugs:** [open an issue](https://github.com/cvas22/decascan/issues/new). Include the command you ran and `decascan --version`.
 - **Contributing:** see [CONTRIBUTING.md](https://github.com/cvas22/decascan/blob/main/CONTRIBUTING.md).
 - **Star the repo** if it's useful. Stars are how other teams find it.
-- **Want to be featured as an adopter or user?** [Raise an request!](https://github.com/cvas22/decascan/issues/new?title=Adopter%3A+) Or see [ADOPTERS.md](https://github.com/cvas22/decascan/blob/main/ADOPTERS.md).
+- **Want to be featured as an adopter or user?** [Raise a request!](https://github.com/cvas22/decascan/issues/new?title=Adopter%3A+) Or see [ADOPTERS.md](https://github.com/cvas22/decascan/blob/main/ADOPTERS.md).
 
 ## Example run
 
