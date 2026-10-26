@@ -545,7 +545,12 @@ and `CHANGELOG.md` when behaviour changes. Rules, parsers, the pipeline and the 
 code owners (see [.github/CODEOWNERS](https://github.com/cvas22/decascan/blob/main/.github/CODEOWNERS));
 GitHub asks them for a review automatically.
 
-Using DecaScan in production? [Add your team →](https://github.com/cvas22/decascan/issues/new?title=Adopter%3A+) as an issue, or see [ADOPTERS.md](https://github.com/cvas22/decascan/blob/main/ADOPTERS.md).
+## Community and adoption
+
+- **Questions and bugs:** [open an issue](https://github.com/cvas22/decascan/issues/new). Include the command you ran and `decascan --version`.
+- **Contributing:** see [CONTRIBUTING.md](https://github.com/cvas22/decascan/blob/main/CONTRIBUTING.md).
+- **Star the repo** if it's useful. Stars are how other teams find it.
+- **Using it in production?** [Add your team →](https://github.com/cvas22/decascan/issues/new?title=Adopter%3A+) as an issue, or see [ADOPTERS.md](https://github.com/cvas22/decascan/blob/main/ADOPTERS.md).
 
 ## Status
 
