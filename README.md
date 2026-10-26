@@ -33,6 +33,13 @@ around the server for the LLM and web risks in the same pass.
 
 No API key. No network calls. No account. `decascan scan .` and you have your answer.
 
+## Community and adoption
+
+- **Questions and bugs:** [open an issue](https://github.com/cvas22/decascan/issues/new). Include the command you ran and `decascan --version`.
+- **Contributing:** see [CONTRIBUTING.md](https://github.com/cvas22/decascan/blob/main/CONTRIBUTING.md).
+- **Star the repo** if it's useful. Stars are how other teams find it.
+- **Want to be featured as an adopter or user?** [Raise an request!](https://github.com/cvas22/decascan/issues/new?title=Adopter%3A+) Or see [ADOPTERS.md](https://github.com/cvas22/decascan/blob/main/ADOPTERS.md).
+
 ## Example run
 
 A real scan of `tests/fixtures/vulnerable_ts` — a 30-line TypeScript MCP server. Fifteen findings in
@@ -545,13 +552,6 @@ coverage floor, the fixture scans, and the wheel check. Add tests with the chang
 and `CHANGELOG.md` when behaviour changes. Rules, parsers, the pipeline and the release metadata have
 code owners (see [.github/CODEOWNERS](https://github.com/cvas22/decascan/blob/main/.github/CODEOWNERS));
 GitHub asks them for a review automatically.
-
-## Community and adoption
-
-- **Questions and bugs:** [open an issue](https://github.com/cvas22/decascan/issues/new). Include the command you ran and `decascan --version`.
-- **Contributing:** see [CONTRIBUTING.md](https://github.com/cvas22/decascan/blob/main/CONTRIBUTING.md).
-- **Star the repo** if it's useful. Stars are how other teams find it.
-- **Want to be featured as an adopter or user?** [Raise an issue!](https://github.com/cvas22/decascan/issues/new?title=Adopter%3A+) Or see [ADOPTERS.md](https://github.com/cvas22/decascan/blob/main/ADOPTERS.md).
 
 ## Status
 
