@@ -59,8 +59,8 @@ jobs:
             htmlcov/
           if-no-files-found: warn
 
-  # Native GitHub-hosted VMs: the three OSes GitHub gives a real machine for, across every
-  # Python the project supports (requires-python >=3.10).
+  # Native GitHub-hosted Linux VMs, across every Python the project supports (requires-python >=3.10).
+  # Windows and macOS are left out: they bill at 2x and 10x on a private repo.
   test:
     runs-on: ${{ matrix.os }}
     strategy:
@@ -73,8 +73,6 @@ jobs:
           - { os: ubuntu-latest, python-version: "3.11" }
           - { os: ubuntu-latest, python-version: "3.12" }
           - { os: ubuntu-latest, python-version: "3.13" }
-          - { os: windows-latest, python-version: "3.13" }
-          - { os: macos-latest, python-version: "3.13" }
 
     steps:
       - uses: actions/checkout@v7
