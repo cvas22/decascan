@@ -1,0 +1,40 @@
+name: test-release
+
+# Publishes a dev build to TestPyPI, started by hand from the Actions tab. Each run uploads a unique
+# version (e.g. 0.1.0.dev7), because TestPyPI, like PyPI, never accepts the same version twice.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  testpypi:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: testpypi
+      url: https://test.pypi.org/p/decascan
+    permissions:
+      id-token: write # the OIDC token TestPyPI verifies
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: astral-sh/setup-uv@v7
+
+      - name: stamp a dev version
+        run: |
+          base=$(grep -m1 '^version = ' pyproject.toml | cut -d'"' -f2)
+          version="${base}.dev${{ github.run_number }}"
+          sed -i "s/^version = \".*\"/version = \"${version}\"/" pyproject.toml
+          sed -i "s/^__version__ = \".*\"/__version__ = \"${version}\"/" src/decascan/__init__.py
+          echo "Publishing ${version}" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: build distributions
+        run: uv build
+
+      - name: publish to TestPyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
