@@ -2,6 +2,7 @@
 
 <img src="docs/assets/banner.svg" alt="decascan: an OWASP Top 10 scanner for MCP, LLM and web code" width="820">
 
+[![PyPI](https://img.shields.io/pypi/v/decascan?style=for-the-badge&logo=pypi&logoColor=white)](https://pypi.org/project/decascan/)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](#install)
 [![License Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue?style=for-the-badge)](LICENSE)
 [![Runs offline](https://img.shields.io/badge/runs-offline-2dd4bf?style=for-the-badge)](#how-it-works-and-where-it-stops)
